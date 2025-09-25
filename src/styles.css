@@ -1,0 +1,76 @@
+:root { --cell: 94px }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#board-container {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), var(--cell));
+    grid-auto-rows: repeat(var(--rows), var(--cell));
+    gap: 0;
+}
+
+.cell {
+    box-sizing: border-box;
+    width: var(--cell);
+    height: var(--cell);
+}
+
+.cell-0 {
+    background-image: url('./assets/0.svg');
+}
+
+.cell-1 {
+    background-image: url('./assets/1.svg');
+}
+
+.cell-2 {
+    background-image: url('./assets/2.svg');
+}
+
+.cell-3 {
+    background-image: url('./assets/3.svg');
+}
+
+.cell-4 {
+    background-image: url('./assets/4.svg');
+}
+
+.cell-5 {
+    background-image: url('./assets/5.svg');
+}
+
+.cell-6 {
+    background-image: url('./assets/6.svg');
+}
+
+.cell-7 {
+    background-image: url('./assets/7.svg');
+}
+
+.cell-8 {
+    background-image: url('./assets/8.svg');
+}
+
+.cell-flag {
+    background-image: url('./assets/flag.svg');
+}
+
+.cell-mine {
+    background-image: url('./assets/mine.svg');
+}
+
+.cell-mine-red {
+    background-image: url('./assets/mine_red.svg');
+}
+
+.cell-closed {
+    background-image: url('./assets/closed.svg');
+}
