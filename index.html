@@ -1,17 +1,25 @@
 <!doctype html>
 <html>
   <body>
-    <div class="col-container"> 
-        <div class="row-container" style="justify-content: space-between; padding-top: 20px;">
-            <p class="text">minesweeper</p>
+    <div class="row-container zoom-slider-container">
+        <p class="txt" style="padding-right: 8px">zoom</p>
+        <input id="zoom-slider" type="range" min="1" max="100" value="50" class="zoom-slider">
+        <p id="zoom-slider-value" class="txt" style="padding-left: 8px">50</p>
+    </div>
+    <div id="main-content" class="col-container"> 
+        <div class="row-container justify-between" style="padding-top: 20px;">
+            <p class="txt">minesweeper</p>
             <div class="row-container">
-                <p id="easy-btn" class="text easy-txt difficulty-txt">easy</p>
-                <p id="medium-btn" class="text medium-txt difficulty-txt">medium</p>
-                <p id="expert-btn" class="text expert-txt difficulty-txt">expert</p>
+                <p id="easy-btn" class="txt easy-txt difficulty-txt">easy</p>
+                <p id="medium-btn" class="txt medium-txt difficulty-txt">medium</p>
+                <p id="expert-btn" class="txt expert-txt difficulty-txt">expert</p>
             </div>
         </div>
         <div id="board-container"></div>
-        <p id="status-msg" class="text">you died; press space to restart</p>
+        <div class="justify-between">
+            <p class="txt"><span id="game-state-msg"></span> press space for new game</p>
+            <p id="continue-btn" class="txt continue-btn">continue?</p>
+        </div>
     </div>
 
     <script type="module" src="./dist/main.js"></script>

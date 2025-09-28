@@ -3,123 +3,213 @@ import { CellState } from "./models/cell-states.js";
 import { BoardDimensions } from "./models/board-dimensions.js";
 
 let board: Cell[][] = [];
-let isGameOver: boolean = true;
-let isFirtClick: boolean = true;
-let curHoveredCellDataset: DOMStringMap | null = null;
+let previousBoardState: Cell[][] = [];
 let boardDimensions: BoardDimensions = new BoardDimensions(16, 16); // default to medium board
 
-const difficultyMap: Map<string, BoardDimensions> = new Map([
-    ['easy', new BoardDimensions(9, 9)],
-    ['medium', new BoardDimensions(16, 16)],
-    ['expert', new BoardDimensions(30, 16)],
+let isGameLost: boolean = false;
+let isGameWon: boolean = false;
+let isFirtClick: boolean = true;
+
+let curHoveredCellDataset: DOMStringMap | null = null;
+
+let currentlyXrayedCell: number[] = [];
+
+
+enum Difficulty {
+    Easy = "easy",
+    Medium = "medium",
+    Expert = "expert",
+}
+
+const difficultyToDimensionsMap: Map<string, BoardDimensions> = new Map([
+    [Difficulty.Easy, new BoardDimensions(9, 9)],
+    [Difficulty.Medium, new BoardDimensions(16, 16)],
+    [Difficulty.Expert, new BoardDimensions(30, 16)],
 ]);
 
 const mineCountMap: Map<string, number> = new Map([
-    ['easy', 10],
-    ['medium', 40],
-    ['expert', 99],
+    [Difficulty.Easy, 10],
+    [Difficulty.Medium, 40],
+    [Difficulty.Expert, 99],
 ]);
 
-window.onload = function (): void {
-    handleNewGame(getStoredDifficulty() ?? 'medium');
-}
+window.onload = () => handleNewGame(getStoredDifficulty() ?? 'medium');
 
 document.getElementById('easy-btn')!.addEventListener('click', () => handleNewGame('easy'));
 document.getElementById('medium-btn')!.addEventListener('click', () => handleNewGame('medium'));
 document.getElementById('expert-btn')!.addEventListener('click', () => handleNewGame('expert'));
+
+document.getElementById('continue-btn')!.addEventListener('click', () => handleContinueGame());
+
+const zoomSlider = document.getElementById('zoom-slider') as HTMLInputElement;
+zoomSlider.oninput = () => {
+    setZoom(zoomSlider.value);
+};
+
+document.addEventListener('keydown', (e) => {
+    if (!shouldProcessInput()) return;
+
+    const hoveredRowAndColumn = getHoveredRowAndColumn();
+
+    const k = e.key.toLowerCase();
+    if (k === "f") handleOpenCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+    else if (k === "g") handleCellSecondary(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+})
 
 document.addEventListener('keyup', (e) => {
     if (e.key === " ") {
         startGame();
         return;
     }
-    if (isGameOver || !curHoveredCellDataset?.row || !curHoveredCellDataset?.col) return;
 
-    const r = parseInt(curHoveredCellDataset!.row!);
-    const c = parseInt(curHoveredCellDataset!.col!);
+    if (!shouldProcessInput()) return;
+
+    const hoveredRowAndColumn = getHoveredRowAndColumn();
 
     const k = e.key.toLowerCase();
-    if (k === "f") handleCellMain(r, c);
-    else if (k === "g") handleCellSecondary(r, c);
+    if (k === "f") handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+})
+
+document.addEventListener('mousedown', (e) => {
+    if (!shouldProcessInput()) return;
+
+    const hoveredRowAndColumn = getHoveredRowAndColumn();
+
+    if (e.button === 0) handleOpenCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+    else if (e.button === 2) handleCellSecondary(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
 })
 
 document.addEventListener('mouseup', (e) => {
-    if (isGameOver || !curHoveredCellDataset?.row || !curHoveredCellDataset?.col) return;
+    if (!shouldProcessInput()) return;
 
-    const element = document.getElementById((e.target as HTMLElement).id);
-    const r = parseInt(element!.dataset.row!);
-    const c = parseInt(element!.dataset.col!);
+    const hoveredRowAndColumn = getHoveredRowAndColumn();
 
-    if (e.button === 0) handleCellMain(r, c);
-    else if (e.button === 2) handleCellSecondary(r, c);
+    if (e.button === 0) handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
 })
 
+function getHoveredRowAndColumn() {
+    return [parseInt(curHoveredCellDataset!.row!), parseInt(curHoveredCellDataset!.col!)];
+}
+
+function shouldProcessInput() {
+    return !isGameLost && !isGameWon && curHoveredCellDataset?.row && curHoveredCellDataset?.col;
+}
+
 function handleNewGame(difficulty: string) {
+    setZoom(getStoredZoom() ?? "50");
+
     localStorage.setItem('difficulty', difficulty);
-    boardDimensions = difficultyMap.get(difficulty)!;
+
+    resetDifficultyUnderlines();
+    document.getElementById(`${difficulty}-btn`)!.classList.add("soft-underline");
+
+    boardDimensions = difficultyToDimensionsMap.get(difficulty)!;
+
     startGame();
 }
 
+function setZoom(strValue: string) {
+    localStorage.setItem('zoom', strValue);
+
+    const intValue = parseInt(strValue);
+    document.getElementById('main-content')!.style.transform = `scale(${intValue / 50})`;
+    zoomSlider.value = strValue;
+
+    const zoomSliderDisplayValue = document.getElementById('zoom-slider-value') as HTMLInputElement;
+    zoomSliderDisplayValue.textContent = `${strValue}%`;
+}
+
+function resetDifficultyUnderlines() {
+    Object.values(Difficulty).forEach(d => {
+        const difficultyBtn = document.getElementById(`${d}-btn`)!;
+        difficultyBtn.classList.remove("soft-underline");
+    });
+}
+
 function startGame() {
-    isGameOver = false;
+    isGameLost = false;
+    isGameWon = false;
     isFirtClick = true;
-    document.getElementById('status-msg')!.style.opacity = '0';
+
+    document.getElementById('game-state-msg')!.innerHTML = '';
+    document.getElementById('continue-btn')!.style.display = 'none';
+
     initEmptyBoard();
 }
 
-function handleGameOver() {
-    isGameOver = true;
-    document.getElementById('status-msg')!.style.opacity = '1';
+function handleOpenCellMain(r: number, c: number) {
+    const cell = board[r][c];
+    if (!cell.isOpen) {
+        return;
+    }
+
+    xrayNeighbours(r, c)
+}
+
+function xrayNeighbours(r: number, c: number) {
+    if (currentlyXrayedCell.length === 2) {
+        hidePreviouslyXrayedNeigbours()
+    }
+
+    const closedNeighbours = getNeighbours(r, c).filter(n => !n.isOpen && !n.isFlagged);
+    for (const n of closedNeighbours) {
+        getHtmlElementByCoords(n.r, n.c)!.className = `cell cell-0`;
+    }
+
+    currentlyXrayedCell = [r, c];
+}
+
+function hidePreviouslyXrayedNeigbours() {
+    if (currentlyXrayedCell.length === 0) {
+        return;
+    }
+
+    const currentR = currentlyXrayedCell[0];
+    const currentC = currentlyXrayedCell[1];
+
+    const closedNeighbours = getNeighbours(currentR, currentC).filter(n => !n.isOpen && !n.isFlagged);
+    for (const n of closedNeighbours) {
+        getHtmlElementByCoords(n.r, n.c)!.className = 'cell cell-closed';
+    }
 }
 
 function handleCellMain(r: number, c: number): void {
+    previousBoardState = JSON.parse(JSON.stringify(board));
+
+    hidePreviouslyXrayedNeigbours();
+
+    const cell = board[r][c];
+    if (cell.isFlagged) {
+        return;
+    }
+
     if (isFirtClick) {
         handleFirstClick(r, c);
     }
 
-    const cell = board[r][c];
+    checkIfGameLost(cell);
+    if (isGameLost) {
+        cell.isOpen = true;
+        updateCell(cell);
+    }
 
-    if (cell.cellState === CellState.Mine) {
-        handleGameOver();
-    } else if (cell.isFlagged) {
+    checkIfGameWon();
+    if (isGameWon) {
+        showMineLocations();
         return;
-    } else if (cell.isOpen) {
+    }
+
+    if (cell.isOpen) {
         handleChord(cell);
         return;
     }
 
-    cell.isOpen = true;
-    updateCell(cell);
     if (cell.value === 0) {
         floodAndFill(cell.r, cell.c);
     }
-}
 
-function handleFirstClick(clickedRow: number, clickedCol: number) {
-    initBoardOnClick(clickedRow, clickedCol);
-    isFirtClick = false;
-}
-
-function handleChord(cell: Cell) {
-    let surroundingFlagCells = getNeighbours(cell.r, cell.c).filter(n => n.isFlagged);
-
-    if (cell.value !== surroundingFlagCells.length) {
-        return;
-    }
-
-    let unflaggedNeighbours = getNeighbours(cell.r, cell.c).filter(n => !surroundingFlagCells.some(f => f.r === n.r && f.c === n.c));
-    for (let n of unflaggedNeighbours) {
-        n.isOpen = true;
-        updateCell(n);
-        if (n.value === 0) {
-            floodAndFill(n.r, n.c);
-        }
-
-        if (n.cellState === CellState.Mine) {
-            handleGameOver();
-            return;
-        }
-    }
+    cell.isOpen = true;
+    updateCell(cell);
 }
 
 function handleCellSecondary(r: number, c: number): void {
@@ -133,6 +223,75 @@ function handleCellSecondary(r: number, c: number): void {
     }
 
     updateCell(cell)
+}
+
+function checkIfGameLost(openedCell: Cell) {
+    if (openedCell.cellState === CellState.Mine) {
+        isGameLost = true;
+        document.getElementById('game-state-msg')!.innerHTML = 'you lost;';
+        document.getElementById('game-state-msg')!.className = 'txt lose-msg';
+        document.getElementById('continue-btn')!.style.display = 'block';
+    }
+}
+
+function checkIfGameWon() {
+    let closedCellsCount = 0;
+    board.forEach(row => row.forEach(cell => closedCellsCount += !cell.isOpen ? 1 : 0));
+
+    if (closedCellsCount === mineCountMap.get(getStoredDifficulty()!)) {
+        isGameWon = true;
+        document.getElementById('game-state-msg')!.innerHTML = 'you won;';
+        document.getElementById('game-state-msg')!.className = 'txt win-msg';
+    }
+}
+
+function handleContinueGame() {
+    board = previousBoardState;
+    drawBoard();
+
+    isGameLost = false;
+
+    document.getElementById('game-state-msg')!.innerHTML = '';
+    document.getElementById('game-state-msg')!.className = 'txt';
+    document.getElementById('continue-btn')!.style.display = 'none';
+}
+
+function showMineLocations() {
+    board.forEach(row => {
+        for (const cell of row) {
+            if (cell.cellState === CellState.Mine) {
+                getHtmlElementByCoords(cell.r, cell.c)!.className = 'cell cell-mine';
+            }
+        }
+    })
+}
+
+function handleChord(cell: Cell) {
+    let surroundingFlagCells = getNeighbours(cell.r, cell.c).filter(n => n.isFlagged);
+
+    if (cell.value !== surroundingFlagCells.length) {
+        return;
+    }
+
+    let unflaggedNeighbours = getNeighbours(cell.r, cell.c).filter(n => !surroundingFlagCells.some(f => f.r === n.r && f.c === n.c));
+    for (let n of unflaggedNeighbours) {
+        n.isOpen = true;
+        updateCell(n);
+
+        if (n.value === 0) {
+            floodAndFill(n.r, n.c);
+        }
+
+        checkIfGameLost(n);
+        if (isGameLost) {
+            return;
+        }
+        checkIfGameWon();
+        if (isGameWon) {
+            showMineLocations();
+            return;
+        }
+    }
 }
 
 function floodAndFill(r: number, c: number) {
@@ -166,15 +325,9 @@ function floodAndFill(r: number, c: number) {
     }
 }
 
-function updateCell(updatedCell: Cell) {
-    if (updatedCell.isFlagged) {
-        updatedCell.isOpen = false;
-    } else if (updatedCell.isOpen) {
-        updatedCell.isFlagged = false;
-    }
-
-    let htmlCell = document.getElementById(`cell_${updatedCell.r}_${updatedCell.c}`);
-    htmlCell!.className = `cell ${getCellClassName(updatedCell)}`;
+function handleFirstClick(clickedRow: number, clickedCol: number) {
+    initBoardOnClick(clickedRow, clickedCol);
+    isFirtClick = false;
 }
 
 function initEmptyBoard() {
@@ -282,6 +435,10 @@ function getStoredDifficulty() {
     return localStorage.getItem('difficulty')
 }
 
+function getStoredZoom() {
+    return localStorage.getItem('zoom')
+}
+
 function getNeighbours(r: number, c: number) {
     const directions = [
         [-1, -1], [-1, 0], [-1, 1],
@@ -310,6 +467,10 @@ function getNeighbours(r: number, c: number) {
 function onMouseOver(mouseEvent: MouseEvent) {
     const e = mouseEvent.target as HTMLElement;
     curHoveredCellDataset = document.getElementById(e.id)!.dataset
+}
+
+function getHtmlElementByCoords(r: number, c: number) {
+    return document.getElementById(`cell_${r}_${c}`)
 }
 
 function getCellClassName(cell: Cell): string {
@@ -343,4 +504,14 @@ function getCellClassName(cell: Cell): string {
                 throw new Error("Cell is invalid");
         }
     }
+}
+
+function updateCell(updatedCell: Cell) {
+    if (updatedCell.isFlagged) {
+        updatedCell.isOpen = false;
+    } else if (updatedCell.isOpen) {
+        updatedCell.isFlagged = false;
+    }
+
+    getHtmlElementByCoords(updatedCell.r, updatedCell.c)!.className = `cell ${getCellClassName(updatedCell)}`;
 }

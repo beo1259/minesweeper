@@ -1,4 +1,7 @@
-:root { --cell: 44px }
+:root { 
+    --cell: 44px;
+    --soft-underline-color: rgba(255, 255, 255, 0.5);
+}
 
 html, body {
     margin: 0;
@@ -21,13 +24,13 @@ html, body {
     flex-direction: row;
 }
 
-.text {
+.txt {
     font-size: 20px;
     color: white;
 }
 
 .easy-txt {
-    color: green;
+    color: rgb(0, 255, 0);
 }
 
 .medium-txt {
@@ -36,6 +39,33 @@ html, body {
 
 .expert-txt {
     color: red;
+}
+
+.win-msg {
+    color: gold;
+}
+
+.lose-msg {
+    color: rgb(255, 0, 0);
+}
+
+.continue-btn {
+    text-decoration: underline;
+    text-decoration-color: var(--soft-underline-color);
+}
+.continue-btn:hover {
+    cursor: pointer;
+    text-decoration-color: white;
+}
+
+.soft-underline {
+    text-decoration: underline;
+    text-decoration-color: var(--soft-underline-color);
+}
+
+.justify-between {
+    display: flex;
+    justify-content: space-between;
 }
 
 .difficulty-txt { }
@@ -49,6 +79,38 @@ html, body {
     grid-template-columns: repeat(var(--cols), var(--cell));
     grid-auto-rows: repeat(var(--rows), var(--cell));
     gap: 0;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 15px;          
+    height: 15px;
+    border-radius: 0;   
+    background-image: url('./assets/closed.svg'); 
+    background-size: contain; 
+    background-repeat: no-repeat; 
+    background-position: center;
+    cursor: pointer;
+    border: none;
+}
+
+input[type="range"] {
+    -webkit-appearance: none; 
+    appearance: none; 
+    background: rgb(200, 200, 200);
+    cursor: pointer;
+    border: none;
+    outline: none; 
+    margin-top: 30px;
+    height: 5px;
+}
+
+.zoom-slider-container {
+    position: absolute;
+    top: 0;
+    z-index: 999;
+    text-shadow: 0px 0px 8px black;
 }
 
 .cell {
