@@ -1,9 +1,10 @@
 export class Cell {
-    constructor(x, y, value, cellState, isOpen) {
-        this.x = x;
-        this.y = y;
+    constructor(r, c, value, cellState, isOpen, isFlagged) {
+        this.r = r;
+        this.c = c;
         this.value = value;
         this.cellState = cellState;
         this.isOpen = isOpen;
+        this.isFlagged = isFlagged;
     }
 }

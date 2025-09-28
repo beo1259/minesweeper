@@ -1,4 +1,4 @@
-:root { --cell: 94px }
+:root { --cell: 44px }
 
 html, body {
     margin: 0;
@@ -8,6 +8,40 @@ html, body {
     display: flex;
     justify-content: center;
     align-items: center;
+    background-color: black;
+}
+
+.col-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.row-container {
+    display: flex;
+    flex-direction: row;
+}
+
+.text {
+    font-size: 20px;
+    color: white;
+}
+
+.easy-txt {
+    color: green;
+}
+
+.medium-txt {
+    color: yellow;
+}
+
+.expert-txt {
+    color: red;
+}
+
+.difficulty-txt { }
+.difficulty-txt:hover {
+    text-decoration: underline;
+    cursor: pointer;
 }
 
 #board-container {
@@ -21,6 +55,9 @@ html, body {
     box-sizing: border-box;
     width: var(--cell);
     height: var(--cell);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain; 
 }
 
 .cell-0 {

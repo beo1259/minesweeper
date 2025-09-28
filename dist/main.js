@@ -1,104 +1,263 @@
 import { Cell } from "./models/cell.js";
 import { CellState } from "./models/cell-states.js";
+import { BoardDimensions } from "./models/board-dimensions.js";
 let board = [];
+let isGameOver = true;
+let isFirtClick = true;
 let curHoveredCellDataset = null;
+let boardDimensions = new BoardDimensions(16, 16); // default to medium board
+const difficultyMap = new Map([
+    ['easy', new BoardDimensions(9, 9)],
+    ['medium', new BoardDimensions(16, 16)],
+    ['expert', new BoardDimensions(30, 16)],
+]);
 window.onload = function () {
-    initBoard(8, 8);
+    const storedDifficulty = localStorage.getItem('difficulty') ?? 'medium';
+    handleNewGame(storedDifficulty);
 };
+document.getElementById('easy-btn').addEventListener('click', () => handleNewGame('easy'));
+document.getElementById('medium-btn').addEventListener('click', () => handleNewGame('medium'));
+document.getElementById('expert-btn').addEventListener('click', () => handleNewGame('expert'));
 document.addEventListener('keyup', (e) => {
-    const x = parseInt(curHoveredCellDataset.row);
-    const y = parseInt(curHoveredCellDataset.col);
+    if (e.key === " ") {
+        startGame();
+        return;
+    }
+    if (isGameOver || !curHoveredCellDataset?.row || !curHoveredCellDataset?.col)
+        return;
+    const r = parseInt(curHoveredCellDataset.row);
+    const c = parseInt(curHoveredCellDataset.col);
     const k = e.key.toLowerCase();
     if (k === "f")
-        handleCellMain(x, y);
+        handleCellMain(r, c);
     else if (k === "g")
-        handleCellSecondary(x, y);
+        handleCellSecondary(r, c);
 });
 document.addEventListener('mouseup', (e) => {
-    const x = parseInt(curHoveredCellDataset.row);
-    const y = parseInt(curHoveredCellDataset.col);
-    if (e.button === 0)
-        handleCellMain(x, y);
-    else if (e.button === 2)
-        handleCellSecondary(x, y);
-});
-export function handleCellMain(x, y) {
-    const cell = board[x][y];
-    if (cell.cellState === CellState.Flagged || cell.isOpen)
+    if (isGameOver || !curHoveredCellDataset?.row || !curHoveredCellDataset?.col)
         return;
+    const element = document.getElementById(e.target.id);
+    const r = parseInt(element.dataset.row);
+    const c = parseInt(element.dataset.col);
+    if (e.button === 0)
+        handleCellMain(r, c);
+    else if (e.button === 2)
+        handleCellSecondary(r, c);
+});
+function handleNewGame(difficulty) {
+    localStorage.setItem('difficulty', difficulty);
+    boardDimensions = difficultyMap.get(difficulty);
+    startGame();
+}
+function startGame() {
+    isGameOver = false;
+    isFirtClick = true;
+    document.getElementById('status-msg').style.opacity = '0';
+    initEmptyBoard();
+}
+function handleGameOver() {
+    isGameOver = true;
+    document.getElementById('status-msg').style.opacity = '1';
+}
+function handleCellMain(r, c) {
+    if (isFirtClick) {
+        handleFirstClick(r, c);
+    }
+    const cell = board[r][c];
+    if (cell.cellState === CellState.Mine) {
+        handleGameOver();
+    }
+    else if (cell.isFlagged) {
+        return;
+    }
+    else if (cell.isOpen) {
+        handleChord(cell);
+        return;
+    }
     cell.isOpen = true;
-    let updatedCell = new Cell(x, y, cell.value, cell.cellState, true);
-    updateCell(x, y, updatedCell);
+    updateCell(cell);
+    if (cell.value === 0) {
+        floodAndFill(cell.r, cell.c);
+    }
 }
-export function handleCellSecondary(x, y) {
-    let updatedCell = new Cell(x, y, 0, CellState.Flagged, true);
-    updateCell(x, y, updatedCell);
+function handleFirstClick(clickedRow, clickedCol) {
+    initBoardOnClick(clickedRow, clickedCol);
+    isFirtClick = false;
 }
-function getCellByCoords(x, y) {
-    return board[x][y];
+function handleChord(cell) {
+    let surroundingFlagCells = getNeighbours(cell.r, cell.c).filter(n => n.isFlagged);
+    if (cell.value !== surroundingFlagCells.length) {
+        return;
+    }
+    let unflaggedNeighbours = getNeighbours(cell.r, cell.c).filter(n => !surroundingFlagCells.some(f => f.r === n.r && f.c === n.c));
+    for (let n of unflaggedNeighbours) {
+        n.isOpen = true;
+        updateCell(n);
+        if (n.value === 0) {
+            floodAndFill(n.r, n.c);
+        }
+        if (n.cellState === CellState.Mine) {
+            handleGameOver();
+            return;
+        }
+    }
 }
-function updateCell(x, y, updatedCell) {
-    board[x][y] = updatedCell;
-    let htmlCell = document.getElementById(`cell_${x}_${y}`);
-    htmlCell.className = getCellClassName(updatedCell);
+function handleCellSecondary(r, c) {
+    const cell = board[r][c];
+    if (cell.isOpen) {
+        return;
+    }
+    else if (cell.isFlagged) {
+        cell.isFlagged = false;
+    }
+    else {
+        cell.isFlagged = true;
+    }
+    updateCell(cell);
 }
-function initBoard(xSize, ySize) {
-    initBoardMatrix(xSize, ySize);
-    drawBoard(xSize, ySize);
-}
-function initBoardMatrix(xSize, ySize) {
-    const mineCoords = getMineCoordinatesOnInit(xSize, ySize);
-    for (let x = 0; x < xSize; x++) {
-        board[x] = [];
-        for (let y = 0; y < ySize; y++) {
-            if (mineCoords.some(c => c[0] === x && c[1] === y)) {
-                board[x][y] = new Cell(x, y, null, CellState.Mine, false);
+function floodAndFill(r, c) {
+    let visited = new Set();
+    let q = [[r, c]];
+    while (q.length > 0) {
+        const coords = q.shift();
+        const key = `${coords[0]},${coords[1]}`;
+        const cell = board[coords[0]][coords[1]];
+        if (visited.has(key)) {
+            continue;
+        }
+        else {
+            visited.add(key);
+        }
+        const neighbours = getNeighbours(cell.r, cell.c);
+        for (let n of neighbours) {
+            if (n.cellState === CellState.Mine) {
+                continue;
             }
             else {
-                board[x][y] = new Cell(x, y, null, CellState.Safe, false);
+                n.isOpen = true;
+                updateCell(n);
+                if (n.value === 0) {
+                    q.push([n.r, n.c]);
+                }
             }
         }
     }
 }
-function getMineCoordinatesOnInit(xSize, ySize) {
-    let mineCount = getMineCountByBoardSize(xSize, ySize);
-    let mines = [];
-    for (let i = 0; i < mineCount; i++) {
-        let randRowIndex = 0;
-        let randColIndex = 0;
-        while (!mines.some(m => m[0] === randRowIndex && m[1] === randColIndex)) {
-            randRowIndex = Math.floor(Math.random() * ySize);
-            randColIndex = Math.floor(Math.random() * xSize);
-        }
-        mines.push([randRowIndex, randColIndex]);
+function updateCell(updatedCell) {
+    if (updatedCell.isFlagged) {
+        updatedCell.isOpen = false;
     }
-    console.log(mines);
-    return mines;
+    else if (updatedCell.isOpen) {
+        updatedCell.isFlagged = false;
+    }
+    let htmlCell = document.getElementById(`cell_${updatedCell.r}_${updatedCell.c}`);
+    htmlCell.className = `cell ${getCellClassName(updatedCell)}`;
 }
-function onMouseOver(mouseEvent) {
-    const e = mouseEvent.target;
-    curHoveredCellDataset = document.getElementById(e.id).dataset;
+function initEmptyBoard() {
+    board = [];
+    for (let r = 0; r < boardDimensions.rows; r++) {
+        board[r] = [];
+        for (let c = 0; c < boardDimensions.columns; c++) {
+            board[r][c] = new Cell(r, c, 0, CellState.Safe, false, false);
+        }
+    }
+    drawBoard();
 }
-function drawBoard(xSize, ySize) {
+function initBoardOnClick(firstClickRow, firstClickCol) {
+    const emptySquaresOnInit = [[firstClickRow, firstClickCol], ...getNeighbours(firstClickRow, firstClickCol).map(cell => [cell.r, cell.c])];
+    const mineCoords = getMineCoordinatesOnInit(emptySquaresOnInit);
+    for (let r = 0; r < boardDimensions.rows; r++) {
+        board[r] = [];
+        for (let c = 0; c < boardDimensions.columns; c++) {
+            if (emptySquaresOnInit.some(coords => coords[0] === r && coords[1] === c)) {
+                board[r][c] = new Cell(r, c, 0, CellState.Safe, false, false);
+            }
+            else if (mineCoords.some(coords => coords.r === r && coords.c === c)) {
+                board[r][c] = new Cell(r, c, null, CellState.Mine, false, false);
+            }
+            else {
+                board[r][c] = new Cell(r, c, 0, CellState.Safe, false, false);
+            }
+        }
+    }
+    for (let r = 0; r < boardDimensions.rows; r++) {
+        for (let c = 0; c < boardDimensions.columns; c++) {
+            if (!mineCoords.some(coords => coords.r === r && coords.c === c)) {
+                let surroundingMineCount = getCellSurroundingMineCount(r, c, mineCoords);
+                board[r][c] = new Cell(r, c, surroundingMineCount, CellState.Safe, false, false);
+            }
+        }
+    }
+    drawBoard();
+}
+function drawBoard() {
     let boardContainer = document.getElementById('board-container');
-    boardContainer.style.setProperty('--cols', String(ySize));
-    boardContainer.style.setProperty('--rows', String(xSize));
+    boardContainer.innerHTML = '';
+    boardContainer.style.setProperty('--cols', String(boardDimensions.columns));
+    boardContainer.style.setProperty('--rows', String(boardDimensions.rows));
     boardContainer.addEventListener('contextmenu', (e) => e.preventDefault());
-    for (let x = 0; x < xSize; x++) {
-        for (let y = 0; y < ySize; y++) {
+    for (let r = 0; r < boardDimensions.rows; r++) {
+        for (let c = 0; c < boardDimensions.columns; c++) {
             var elem = document.createElement('div');
             boardContainer.appendChild(elem);
-            elem.id = `cell_${x}_${y}`;
-            elem.className = `cell ${getCellClassName(board[x][y])}`;
-            elem.setAttribute('data-row', x.toString());
-            elem.setAttribute('data-col', y.toString());
+            elem.id = `cell_${r}_${c}`;
+            elem.className = `cell ${getCellClassName(board[r][c])}`;
+            elem.setAttribute('data-row', r.toString());
+            elem.setAttribute('data-col', c.toString());
             elem.addEventListener('mouseover', (e) => onMouseOver(e));
             elem.addEventListener('mouseout', () => curHoveredCellDataset = null);
         }
     }
 }
+function getCellSurroundingMineCount(r, c, mineCoords) {
+    let surroundingMineCount = 0;
+    let neighbours = getNeighbours(r, c);
+    for (let n of neighbours) {
+        if (mineCoords.some(m => m.r === n.r && m.c === n.c)) {
+            surroundingMineCount++;
+        }
+    }
+    return surroundingMineCount;
+}
+function getMineCoordinatesOnInit(exemptCoords) {
+    let mineCount = getMineCountByBoardSize();
+    const isExempt = (r, c) => exemptCoords.some(([er, ec]) => er === r && ec === c);
+    const mines = [];
+    for (let i = 0; i < mineCount; i++) {
+        let r = Math.floor(Math.random() * boardDimensions.rows);
+        let c = Math.floor(Math.random() * boardDimensions.columns);
+        while (isExempt(r, c) || mines.some(m => m.r === r && m.c === c)) {
+            r = Math.floor(Math.random() * boardDimensions.rows);
+            c = Math.floor(Math.random() * boardDimensions.columns);
+        }
+        mines.push({ r: r, c: c });
+    }
+    return mines;
+}
+function getNeighbours(r, c) {
+    const directions = [
+        [-1, -1], [-1, 0], [-1, 1],
+        [0, -1], [0, 1],
+        [1, -1], [1, 0], [1, 1],
+    ];
+    let neighbours = [];
+    for (let dir of directions) {
+        const targetRow = r + dir[0];
+        const targetCol = c + dir[1];
+        if (targetRow < 0 || targetRow > boardDimensions.rows - 1
+            || targetCol < 0 || targetCol > boardDimensions.columns - 1) {
+            continue;
+        }
+        neighbours.push(board[targetRow][targetCol]);
+    }
+    return neighbours;
+}
+function onMouseOver(mouseEvent) {
+    const e = mouseEvent.target;
+    curHoveredCellDataset = document.getElementById(e.id).dataset;
+}
 function getCellClassName(cell) {
-    if (cell.cellState === CellState.Flagged) {
+    if (cell.isFlagged) {
         return 'cell-flag';
     }
     else if (!cell.isOpen) {
@@ -132,12 +291,12 @@ function getCellClassName(cell) {
         }
     }
 }
-function getMineCountByBoardSize(xSize, ySize) {
-    if (xSize === 8 && ySize === 8)
+function getMineCountByBoardSize() {
+    if (boardDimensions.columns === 9 && boardDimensions.rows === 9)
         return 10;
-    if (xSize === 16 && ySize === 16)
+    if (boardDimensions.columns === 16 && boardDimensions.rows === 16)
         return 40;
-    if (xSize === 30 && ySize === 16)
+    if (boardDimensions.columns === 30 && boardDimensions.rows === 16)
         return 99;
     else
         throw new Error("Invalid board size");

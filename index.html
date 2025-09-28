@@ -1,7 +1,18 @@
 <!doctype html>
 <html>
   <body>
-    <div id="board-container"></div>
+    <div class="col-container"> 
+        <div class="row-container" style="justify-content: space-between; padding-top: 20px;">
+            <p class="text">minesweeper</p>
+            <div class="row-container">
+                <p id="easy-btn" class="text easy-txt difficulty-txt">easy</p>
+                <p id="medium-btn" class="text medium-txt difficulty-txt">medium</p>
+                <p id="expert-btn" class="text expert-txt difficulty-txt">expert</p>
+            </div>
+        </div>
+        <div id="board-container"></div>
+        <p id="status-msg" class="text">you died; press space to restart</p>
+    </div>
 
     <script type="module" src="./dist/main.js"></script>
     <link rel="stylesheet" type="text/css" href="./src/styles.css">
