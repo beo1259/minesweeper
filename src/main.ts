@@ -14,9 +14,14 @@ const difficultyMap: Map<string, BoardDimensions> = new Map([
     ['expert', new BoardDimensions(30, 16)],
 ]);
 
+const mineCountMap: Map<string, number> = new Map([
+    ['easy', 10],
+    ['medium', 40],
+    ['expert', 99],
+]);
+
 window.onload = function (): void {
-    const storedDifficulty = localStorage.getItem('difficulty') ?? 'medium';
-    handleNewGame(storedDifficulty);
+    handleNewGame(getStoredDifficulty() ?? 'medium');
 }
 
 document.getElementById('easy-btn')!.addEventListener('click', () => handleNewGame('easy'));
@@ -252,7 +257,7 @@ function getCellSurroundingMineCount(r: number, c: number, mineCoords: any[]) {
 }
 
 function getMineCoordinatesOnInit(exemptCoords: number[][]) {
-    let mineCount = getMineCountByBoardSize();
+    let mineCount = mineCountMap.get(getStoredDifficulty() ?? 'medium')!;
 
     const isExempt = (r: number, c: number) =>
         exemptCoords.some(([er, ec]) => er === r && ec === c);
@@ -271,6 +276,10 @@ function getMineCoordinatesOnInit(exemptCoords: number[][]) {
     }
 
     return mines;
+}
+
+function getStoredDifficulty() {
+    return localStorage.getItem('difficulty')
 }
 
 function getNeighbours(r: number, c: number) {
@@ -334,11 +343,4 @@ function getCellClassName(cell: Cell): string {
                 throw new Error("Cell is invalid");
         }
     }
-}
-
-function getMineCountByBoardSize() {
-    if (boardDimensions.columns === 9 && boardDimensions.rows === 9) return 10;
-    if (boardDimensions.columns === 16 && boardDimensions.rows === 16) return 40;
-    if (boardDimensions.columns === 30 && boardDimensions.rows === 16) return 99;
-    else throw new Error("Invalid board size");
 }
