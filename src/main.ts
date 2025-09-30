@@ -1,5 +1,5 @@
 import { Cell } from "./models/cell.js";
-import { CellState } from "./models/cell-states.js";
+import { CellStates } from "./models/cell-states.js";
 import { BoardDimensions } from "./models/board-dimensions.js";
 
 let board: Cell[][] = [];
@@ -10,41 +10,63 @@ let isGameLost: boolean = false;
 let isGameWon: boolean = false;
 let isFirtClick: boolean = true;
 
+let columnCount: number | undefined; 
+let rowCount: number | undefined; 
+let mineCount: number | undefined; 
+
 let curHoveredCellDataset: DOMStringMap | null = null;
 
 let currentlyXrayedCell: number[] = [];
 
-
-enum Difficulty {
-    Easy = "easy",
-    Medium = "medium",
-    Expert = "expert",
+enum Difficulties {
+    EASY = "easy",
+    MEDIUM = "medium",
+    EXPERT = "expert",
 }
 
 const difficultyToDimensionsMap: Map<string, BoardDimensions> = new Map([
-    [Difficulty.Easy, new BoardDimensions(9, 9)],
-    [Difficulty.Medium, new BoardDimensions(16, 16)],
-    [Difficulty.Expert, new BoardDimensions(30, 16)],
+    [Difficulties.EASY, new BoardDimensions(9, 9)],
+    [Difficulties.MEDIUM, new BoardDimensions(16, 16)],
+    [Difficulties.EXPERT, new BoardDimensions(30, 16)],
 ]);
 
 const mineCountMap: Map<string, number> = new Map([
-    [Difficulty.Easy, 10],
-    [Difficulty.Medium, 40],
-    [Difficulty.Expert, 99],
+    [Difficulties.EASY, 10],
+    [Difficulties.MEDIUM, 40],
+    [Difficulties.EXPERT, 99],
 ]);
 
-window.onload = () => handleNewGame(getStoredDifficulty() ?? 'medium');
+window.onload = () => handleNewGame(getStoredDifficulty() ?? 'medium', false);
 
-document.getElementById('easy-btn')!.addEventListener('click', () => handleNewGame('easy'));
-document.getElementById('medium-btn')!.addEventListener('click', () => handleNewGame('medium'));
-document.getElementById('expert-btn')!.addEventListener('click', () => handleNewGame('expert'));
+document.getElementById('easy-btn')!.addEventListener('click', () => handleNewGame('easy', true));
+document.getElementById('medium-btn')!.addEventListener('click', () => handleNewGame('medium', true));
+document.getElementById('expert-btn')!.addEventListener('click', () => handleNewGame('expert', true));
+
+document.getElementById('space-btn')!.addEventListener('click', () => startGame());
 
 document.getElementById('continue-btn')!.addEventListener('click', () => handleContinueGame());
 
-const zoomSlider = document.getElementById('zoom-slider') as HTMLInputElement;
-zoomSlider.oninput = () => {
-    setZoom(zoomSlider.value);
+
+const colsSlider = document.getElementById('cols-slider') as HTMLInputElement;
+colsSlider.oninput = () => {
+    document.getElementById('cols-slider-value')!.innerHTML = colsSlider.value;
+    columnCount = parseInt(colsSlider.value); 
+    handleNewGame(getStoredDifficulty()!, false)
 };
+const rowsSlider = document.getElementById('rows-slider') as HTMLInputElement;
+rowsSlider.oninput = () => {
+    document.getElementById('rows-slider-value')!.innerHTML = rowsSlider.value;
+    rowCount = parseInt(rowsSlider.value); 
+    handleNewGame(getStoredDifficulty()!, false)
+};
+const minesSlider = document.getElementById('mines-slider') as HTMLInputElement;
+minesSlider.oninput = () => {
+    document.getElementById('mines-slider-value')!.innerHTML = minesSlider.value;
+    mineCount = parseInt(minesSlider.value); 
+    handleNewGame(getStoredDifficulty()!, false)
+};
+
+window.addEventListener('resize', () => setZoom());
 
 document.addEventListener('keydown', (e) => {
     if (!shouldProcessInput()) return;
@@ -95,32 +117,44 @@ function shouldProcessInput() {
     return !isGameLost && !isGameWon && curHoveredCellDataset?.row && curHoveredCellDataset?.col;
 }
 
-function handleNewGame(difficulty: string) {
-    setZoom(getStoredZoom() ?? "50");
-
+function handleNewGame(difficulty: string, didClickDifficulty: boolean) {
     localStorage.setItem('difficulty', difficulty);
 
-    resetDifficultyUnderlines();
-    document.getElementById(`${difficulty}-btn`)!.classList.add("soft-underline");
-
     boardDimensions = difficultyToDimensionsMap.get(difficulty)!;
+    if (didClickDifficulty || columnCount === undefined || rowCount === undefined || mineCount === undefined) {
+        columnCount = boardDimensions.columns;
+        rowCount = boardDimensions.rows;
+        mineCount = mineCountMap.get(difficulty);
+    } 
 
+    setZoom();
     startGame();
 }
 
-function setZoom(strValue: string) {
-    localStorage.setItem('zoom', strValue);
+function setZoom() {
+    const container = document.getElementById('board-container')!;
 
-    const intValue = parseInt(strValue);
-    document.getElementById('main-content')!.style.transform = `scale(${intValue / 50})`;
-    zoomSlider.value = strValue;
+    const originalHeight = rowCount! * 44;
+    const maxHeight = getHeightBetweenTopAndBottom() - 90; 
 
-    const zoomSliderDisplayValue = document.getElementById('zoom-slider-value') as HTMLInputElement;
-    zoomSliderDisplayValue.textContent = `${strValue}%`;
+    const scaleFactor = maxHeight / originalHeight;
+
+    container.style.transform = `scale(${scaleFactor})`;
 }
 
-function resetDifficultyUnderlines() {
-    Object.values(Difficulty).forEach(d => {
+function getHeightBetweenTopAndBottom() {
+    const topBarElem = document.getElementById('top-bar')!;
+    const topBarHeight: number = topBarElem.offsetHeight;
+
+    const bottomBarElem = document.getElementById('bottom-bar')!
+    const bottomBarHeight: number = bottomBarElem.offsetHeight;
+    
+    return window.innerHeight - topBarHeight - bottomBarHeight;
+    //return window.innerHeight - topBarHeight;
+}
+
+function resetDifficultiesUnderlines() {
+    Object.values(Difficulties).forEach(d => {
         const difficultyBtn = document.getElementById(`${d}-btn`)!;
         difficultyBtn.classList.remove("soft-underline");
     });
@@ -131,10 +165,8 @@ function startGame() {
     isGameWon = false;
     isFirtClick = true;
 
-    document.getElementById('game-state-msg')!.innerHTML = '';
-    document.getElementById('continue-btn')!.style.display = 'none';
-
     initEmptyBoard();
+    setNewGameStyles();
 }
 
 function handleOpenCellMain(r: number, c: number) {
@@ -226,11 +258,14 @@ function handleCellSecondary(r: number, c: number): void {
 }
 
 function checkIfGameLost(openedCell: Cell) {
-    if (openedCell.cellState === CellState.Mine) {
+    if (openedCell.cellState === CellStates.MINE) {
         isGameLost = true;
-        document.getElementById('game-state-msg')!.innerHTML = 'you lost;';
+        document.getElementById('game-state-msg')!.innerHTML = 'you lost;&nbsp;';
         document.getElementById('game-state-msg')!.className = 'txt lose-msg';
         document.getElementById('continue-btn')!.style.display = 'block';
+        document.getElementById('board-container')!.style.filter = 'blur(1px)';
+        document.getElementById('game-over-container')!.style.display = 'flex';
+        document.getElementById('game-over-container')!.style.boxShadow = '10px 10px 0 red, -10px -10px 0 red';
     }
 }
 
@@ -238,10 +273,13 @@ function checkIfGameWon() {
     let closedCellsCount = 0;
     board.forEach(row => row.forEach(cell => closedCellsCount += !cell.isOpen ? 1 : 0));
 
-    if (closedCellsCount === mineCountMap.get(getStoredDifficulty()!)) {
+    if (closedCellsCount === mineCount!) {
         isGameWon = true;
-        document.getElementById('game-state-msg')!.innerHTML = 'you won;';
+        document.getElementById('game-state-msg')!.innerHTML = 'you won!';
         document.getElementById('game-state-msg')!.className = 'txt win-msg';
+        document.getElementById('board-container')!.style.filter = 'blur(1px)';
+        document.getElementById('game-over-container')!.style.display = 'flex';
+        document.getElementById('game-over-container')!.style.boxShadow = '10px 10px 0 gold, -10px -10px 0 gold';
     }
 }
 
@@ -250,16 +288,35 @@ function handleContinueGame() {
     drawBoard();
 
     isGameLost = false;
+    setNewGameStyles();
+}
 
+function setNewGameStyles() {
     document.getElementById('game-state-msg')!.innerHTML = '';
-    document.getElementById('game-state-msg')!.className = 'txt';
     document.getElementById('continue-btn')!.style.display = 'none';
+    document.getElementById('board-container')!.style.filter = 'none';
+    document.getElementById('continue-btn')!.style.display = 'none';
+    document.getElementById('game-over-container')!.style.display = 'none';
+
+    resetDifficultiesUnderlines();
+    document.getElementById(`${localStorage.getItem('difficulty')!}-btn`)!.classList.add("soft-underline");
+
+    setSliderValues();
+}
+
+function setSliderValues() {
+    document.getElementById('cols-slider-value')!.innerHTML = columnCount!.toString();
+    document.getElementById('rows-slider-value')!.innerHTML = rowCount!.toString();
+    document.getElementById('mines-slider-value')!.innerHTML = mineCount!.toString();
+    (document.getElementById('cols-slider') as HTMLInputElement).value = columnCount!.toString();
+    (document.getElementById('rows-slider') as HTMLInputElement).value = rowCount!.toString();
+    (document.getElementById('mines-slider') as HTMLInputElement).value = mineCount!.toString();
 }
 
 function showMineLocations() {
     board.forEach(row => {
         for (const cell of row) {
-            if (cell.cellState === CellState.Mine) {
+            if (cell.cellState === CellStates.MINE) {
                 getHtmlElementByCoords(cell.r, cell.c)!.className = 'cell cell-mine';
             }
         }
@@ -311,7 +368,7 @@ function floodAndFill(r: number, c: number) {
 
         const neighbours = getNeighbours(cell.r, cell.c);
         for (let n of neighbours) {
-            if (n.cellState === CellState.Mine) {
+            if (n.cellState === CellStates.MINE) {
                 continue;
             } else {
                 n.isOpen = true;
@@ -333,10 +390,10 @@ function handleFirstClick(clickedRow: number, clickedCol: number) {
 function initEmptyBoard() {
     board = [];
 
-    for (let r = 0; r < boardDimensions.rows; r++) {
+    for (let r = 0; r < rowCount!; r++) {
         board[r] = []
-        for (let c = 0; c < boardDimensions.columns; c++) {
-            board[r][c] = new Cell(r, c, 0, CellState.Safe, false, false);
+        for (let c = 0; c < columnCount!; c++) {
+            board[r][c] = new Cell(r, c, 0, CellStates.SAFE, false, false);
         }
     }
 
@@ -347,24 +404,24 @@ function initBoardOnClick(firstClickRow: number, firstClickCol: number): void {
     const emptySquaresOnInit = [[firstClickRow, firstClickCol], ...getNeighbours(firstClickRow, firstClickCol).map(cell => [cell.r, cell.c])];
     const mineCoords = getMineCoordinatesOnInit(emptySquaresOnInit);
 
-    for (let r = 0; r < boardDimensions.rows; r++) {
+    for (let r = 0; r < rowCount!; r++) {
         board[r] = []
-        for (let c = 0; c < boardDimensions.columns; c++) {
+        for (let c = 0; c < columnCount!; c++) {
             if (emptySquaresOnInit.some(coords => coords[0] === r && coords[1] === c)) {
-                board[r][c] = new Cell(r, c, 0, CellState.Safe, false, false);
+                board[r][c] = new Cell(r, c, 0, CellStates.SAFE, false, false);
             } else if (mineCoords.some(coords => coords.r === r && coords.c === c)) {
-                board[r][c] = new Cell(r, c, null, CellState.Mine, false, false);
+                board[r][c] = new Cell(r, c, null, CellStates.MINE, false, false);
             } else {
-                board[r][c] = new Cell(r, c, 0, CellState.Safe, false, false);
+                board[r][c] = new Cell(r, c, 0, CellStates.SAFE, false, false);
             }
         }
     }
 
-    for (let r = 0; r < boardDimensions.rows; r++) {
-        for (let c = 0; c < boardDimensions.columns; c++) {
+    for (let r = 0; r < rowCount!; r++) {
+        for (let c = 0; c < columnCount!; c++) {
             if (!mineCoords.some(coords => coords.r === r && coords.c === c)) {
                 let surroundingMineCount = getCellSurroundingMineCount(r, c, mineCoords);
-                board[r][c] = new Cell(r, c, surroundingMineCount, CellState.Safe, false, false);
+                board[r][c] = new Cell(r, c, surroundingMineCount, CellStates.SAFE, false, false);
             }
         }
     }
@@ -375,12 +432,12 @@ function initBoardOnClick(firstClickRow: number, firstClickCol: number): void {
 function drawBoard(): void {
     let boardContainer = document.getElementById('board-container')!;
     boardContainer.innerHTML = '';
-    boardContainer.style.setProperty('--cols', String(boardDimensions.columns));
-    boardContainer.style.setProperty('--rows', String(boardDimensions.rows));
+    boardContainer.style.setProperty('--cols', String(columnCount));
+    boardContainer.style.setProperty('--rows', String(rowCount));
     boardContainer.addEventListener('contextmenu', (e) => e.preventDefault());
 
-    for (let r = 0; r < boardDimensions.rows; r++) {
-        for (let c = 0; c < boardDimensions.columns; c++) {
+    for (let r = 0; r < rowCount!; r++) {
+        for (let c = 0; c < columnCount!; c++) {
             var elem = document.createElement('div');
             boardContainer.appendChild(elem);
 
@@ -410,19 +467,17 @@ function getCellSurroundingMineCount(r: number, c: number, mineCoords: any[]) {
 }
 
 function getMineCoordinatesOnInit(exemptCoords: number[][]) {
-    let mineCount = mineCountMap.get(getStoredDifficulty() ?? 'medium')!;
-
     const isExempt = (r: number, c: number) =>
         exemptCoords.some(([er, ec]) => er === r && ec === c);
 
     const mines: { r: number; c: number }[] = [];
-    for (let i = 0; i < mineCount; i++) {
-        let r = Math.floor(Math.random() * boardDimensions.rows);
-        let c = Math.floor(Math.random() * boardDimensions.columns);
+    for (let i = 0; i < mineCount!; i++) {
+        let r = Math.floor(Math.random() * rowCount!);
+        let c = Math.floor(Math.random() * columnCount!);
 
         while (isExempt(r, c) || mines.some(m => m.r === r && m.c === c)) {
-            r = Math.floor(Math.random() * boardDimensions.rows);
-            c = Math.floor(Math.random() * boardDimensions.columns);
+            r = Math.floor(Math.random() * rowCount!);
+            c = Math.floor(Math.random() * columnCount!);
         }
 
         mines.push({ r: r, c: c });
@@ -452,8 +507,8 @@ function getNeighbours(r: number, c: number) {
         const targetCol = c + dir[1];
 
         if (
-            targetRow < 0 || targetRow > boardDimensions.rows - 1
-            || targetCol < 0 || targetCol > boardDimensions.columns - 1
+            targetRow < 0 || targetRow > rowCount! - 1
+            || targetCol < 0 || targetCol > columnCount! - 1
         ) {
             continue;
         }
@@ -478,7 +533,7 @@ function getCellClassName(cell: Cell): string {
         return 'cell-flag';
     } else if (!cell.isOpen) {
         return 'cell-closed';
-    } else if (cell.cellState === CellState.Mine) {
+    } else if (cell.cellState === CellStates.MINE) {
         return cell.isOpen ? 'cell-mine-red' : 'cell-mine';
     } else {
         switch (cell.value) {

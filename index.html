@@ -1,29 +1,46 @@
 <!doctype html>
 <html>
-  <body>
-    <div class="row-container zoom-slider-container">
-        <p class="txt" style="padding-right: 8px">zoom</p>
-        <input id="zoom-slider" type="range" min="1" max="100" value="50" class="zoom-slider">
-        <p id="zoom-slider-value" class="txt" style="padding-left: 8px">50</p>
-    </div>
-    <div id="main-content" class="col-container"> 
-        <div class="row-container justify-between" style="padding-top: 20px;">
-            <p class="txt">minesweeper</p>
-            <div class="row-container">
-                <p id="easy-btn" class="txt easy-txt difficulty-txt">easy</p>
-                <p id="medium-btn" class="txt medium-txt difficulty-txt">medium</p>
-                <p id="expert-btn" class="txt expert-txt difficulty-txt">expert</p>
+    <body>
+        <div id="top-bar">
+            <div class="col-container">
+                <p class="top-bar-item" style="align-self: flex-start">minesweeper</p>
+            </div>
+            <div class="new-game-container">
+                <p id="space-btn">new game (space bar)</p>
+            </div>
+            <div class="row-container top-bar-item difficulty-btns">
+                <p id="easy-btn" class="easy-txt difficulty-txt">easy</p>
+                <p id="medium-btn" class="medium-txt difficulty-txt">medium</p>
+                <p id="expert-btn" class="expert-txt difficulty-txt">expert</p>
             </div>
         </div>
-        <div id="board-container"></div>
-        <div class="justify-between">
-            <p class="txt"><span id="game-state-msg"></span> press space for new game</p>
-            <p id="continue-btn" class="txt continue-btn">continue?</p>
-        </div>
-    </div>
 
-    <script type="module" src="./dist/main.js"></script>
-    <link rel="stylesheet" type="text/css" href="./src/styles.css">
-    <link rel="icon" href="data:,">
-  </body>
+        <div id="board-container"></div>
+        <div id="game-over-container" class="row-container">
+            <p id="game-state-msg"></p>
+            <p id="continue-btn"> continue?</p>
+        </div>
+
+        <div id="bottom-bar">
+            <div class="row-container">
+                <p class="slider-txt">columns</p>
+                <input id="cols-slider" type="range" min="2" max="60">
+                <p id="cols-slider-value" type="text" readonly></p>
+            </div>
+            <div class="row-container">
+                <p class="slider-txt">rows</p>
+                <input id="rows-slider" type="range" min="2" max="60">
+                <p id="rows-slider-value" type="text" readonly></p>
+            </div>
+            <div class="row-container">
+                <p class="slider-txt">mines</p>
+                <input id="mines-slider" type="range" min="2" max="200">
+                <p id="mines-slider-value" type="text" readonly></p>
+            </div>
+        </div>
+
+        <script type="module" src="./dist/main.js"></script>
+        <link rel="stylesheet" type="text/css" href="./src/styles.css">
+        <link rel="icon" href="data:,">
+    </body>
 </html>

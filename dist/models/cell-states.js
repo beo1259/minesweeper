@@ -1,5 +1,5 @@
-export var CellState;
-(function (CellState) {
-    CellState[CellState["Safe"] = 0] = "Safe";
-    CellState[CellState["Mine"] = 1] = "Mine";
-})(CellState || (CellState = {}));
+export var CellStates;
+(function (CellStates) {
+    CellStates[CellStates["SAFE"] = 0] = "SAFE";
+    CellStates[CellStates["MINE"] = 1] = "MINE";
+})(CellStates || (CellStates = {}));
