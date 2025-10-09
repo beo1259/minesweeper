@@ -3,7 +3,7 @@
     <body>
         <div id="top-bar">
             <div class="col-container">
-                <p class="top-bar-item" style="align-self: flex-start">minesweeper</p>
+                <p class="top-bar-item title">minesweeper</p>
             </div>
             <div class="new-game-container">
                 <p id="space-btn">new game (space bar)</p>
@@ -22,20 +22,20 @@
         </div>
 
         <div id="bottom-bar">
-            <div class="row-container">
+            <div class="row-container slider-container">
                 <p class="slider-txt">columns</p>
                 <input id="cols-slider" type="range" min="2" max="60">
-                <p id="cols-slider-value" type="text" readonly></p>
+                <p id="cols-slider-value" type="text" readonly class="slider-value-txt"></p>
             </div>
-            <div class="row-container">
+            <div class="row-container slider-container">
                 <p class="slider-txt">rows</p>
                 <input id="rows-slider" type="range" min="2" max="60">
-                <p id="rows-slider-value" type="text" readonly></p>
+                <p id="rows-slider-value" type="text" readonly class="slider-value-txt"></p>
             </div>
-            <div class="row-container">
+            <div class="row-container slider-container">
                 <p class="slider-txt">mines</p>
                 <input id="mines-slider" type="range" min="2" max="200">
-                <p id="mines-slider-value" type="text" readonly></p>
+                <p id="mines-slider-value" type="text" readonly class="slider-value-txt"></p>
             </div>
         </div>
 

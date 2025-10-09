@@ -22,7 +22,7 @@ html, body {
     justify-content: space-between;
     align-items: center;
     align-self: center;
-    width: 50%;
+    width: 60%;
     padding-top: 30px;
     height: 20px;
     font-size: 24px;
@@ -35,13 +35,16 @@ html, body {
     align-self: center;
     justify-content: space-between;
     bottom: 0;
-    width: 50%;
     height: 80px;
 }
 
 p {
     margin: 0;
     padding: 0;
+}
+
+.title {
+    font-size: 30px;
 }
 
 .top-bar-item {
@@ -62,8 +65,8 @@ p {
 }
 
 #space-btn {
-    color: rgb(240, 240, 240);
-    font-size: 20px;
+    color: rgb(230, 230, 230);
+    font-size: 22px;
     text-decoration: underline;
     text-decoration-color: var(--soft-underline-color);
 }
@@ -82,15 +85,14 @@ p {
     flex-direction: row;
 }
 
-.txt {
-    font-size: 20px;
-    color: white;
-}
-
 .difficulty-btns {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.difficulty-txt {
+    font-size:
 }
 
 .easy-txt {
@@ -152,7 +154,7 @@ p {
 }
 
 .difficulty-txt { 
-    font-size: 24px;
+    font-size: 30px;
 }
 .difficulty-txt:hover {
     text-decoration: underline;
@@ -172,8 +174,8 @@ p {
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 15px;          
-    height: 15px;
+    width: 20px;          
+    height: 20px;
     border-radius: 0;   
     background-image: url('./assets/closed.svg'); 
     background-size: contain; 
@@ -195,24 +197,22 @@ input[type="range"] {
     border: none;
     outline: none; 
     margin-top: 9px;
-    height: 5px;
+    height: 8px;
+    width: 180px;
+}
+
+.slider-container {
+    padding: 0 40px 0 40px;
 }
 
 .slider-txt {
-    font-size: 17px;
+    font-size: 23px;
     color: white;
     padding: 0 5px 0 5px;
 }
 
-#cols-slider-value {
-    color: white;
-    padding-left: 8px;
-}
-#rows-slider-value {
-    color: white;
-    padding-left: 8px;
-}
-#mines-slider-value {
+.slider-value-txt {
+    font-size: 23px;
     color: white;
     padding-left: 8px;
 }
@@ -276,4 +276,8 @@ input[type="range"] {
 
 .cell-closed {
     background-image: url('./assets/closed.svg');
+}
+
+.cell-mine-found {
+    background-image: url('./assets/mine_found.svg');
 }

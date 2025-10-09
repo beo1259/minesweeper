@@ -1,6 +1,7 @@
 import { Cell } from "./models/cell.js";
 import { CellStates } from "./models/cell-states.js";
 import { BoardDimensions } from "./models/board-dimensions.js";
+import { analyzeBoard } from "./solver.js";
 let board = [];
 let previousBoardState = [];
 let boardDimensions = new BoardDimensions(16, 16); // default to medium board
@@ -72,8 +73,10 @@ document.addEventListener('keyup', (e) => {
         return;
     const hoveredRowAndColumn = getHoveredRowAndColumn();
     const k = e.key.toLowerCase();
-    if (k === "f")
+    if (k === "f") {
         handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+        analyzeBoard(board);
+    }
 });
 document.addEventListener('mousedown', (e) => {
     if (!shouldProcessInput())
@@ -88,8 +91,11 @@ document.addEventListener('mouseup', (e) => {
     if (!shouldProcessInput())
         return;
     const hoveredRowAndColumn = getHoveredRowAndColumn();
-    if (e.button === 0)
+    if (e.button === 0) {
         handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+        analyzeBoard(board);
+    }
+    ;
 });
 function getHoveredRowAndColumn() {
     return [parseInt(curHoveredCellDataset.row), parseInt(curHoveredCellDataset.col)];
@@ -110,9 +116,10 @@ function handleNewGame(difficulty, didClickDifficulty) {
 }
 function setZoom() {
     const container = document.getElementById('board-container');
-    const originalHeight = rowCount * 44;
+    //const originalSize = rowCount! * 44 + columnCount! * 44;
+    const originalSize = rowCount * 44;
     const maxHeight = getHeightBetweenTopAndBottom() - 90;
-    const scaleFactor = maxHeight / originalHeight;
+    const scaleFactor = maxHeight / originalSize;
     container.style.transform = `scale(${scaleFactor})`;
 }
 function getHeightBetweenTopAndBottom() {
@@ -121,7 +128,6 @@ function getHeightBetweenTopAndBottom() {
     const bottomBarElem = document.getElementById('bottom-bar');
     const bottomBarHeight = bottomBarElem.offsetHeight;
     return window.innerHeight - topBarHeight - bottomBarHeight;
-    //return window.innerHeight - topBarHeight;
 }
 function resetDifficultiesUnderlines() {
     Object.values(Difficulties).forEach(d => {
@@ -174,16 +180,6 @@ function handleCellMain(r, c) {
     if (isFirtClick) {
         handleFirstClick(r, c);
     }
-    checkIfGameLost(cell);
-    if (isGameLost) {
-        cell.isOpen = true;
-        updateCell(cell);
-    }
-    checkIfGameWon();
-    if (isGameWon) {
-        showMineLocations();
-        return;
-    }
     if (cell.isOpen) {
         handleChord(cell);
         return;
@@ -193,6 +189,14 @@ function handleCellMain(r, c) {
     }
     cell.isOpen = true;
     updateCell(cell);
+    checkIfGameLost(cell);
+    if (isGameLost) {
+        return;
+    }
+    checkIfGameWon();
+    if (isGameWon) {
+        showMineLocations();
+    }
 }
 function handleCellSecondary(r, c) {
     const cell = board[r][c];
@@ -329,13 +333,13 @@ function initEmptyBoard() {
     drawBoard();
 }
 function initBoardOnClick(firstClickRow, firstClickCol) {
-    const emptySquaresOnInit = [[firstClickRow, firstClickCol], ...getNeighbours(firstClickRow, firstClickCol).map(cell => [cell.r, cell.c])];
-    const mineCoords = getMineCoordinatesOnInit(emptySquaresOnInit);
+    const safeSquaresOnInit = [[firstClickRow, firstClickCol], ...getNeighbours(firstClickRow, firstClickCol).map(cell => [cell.r, cell.c])];
+    const mineCoords = generateMineCoordinatesOnInit(safeSquaresOnInit);
     for (let r = 0; r < rowCount; r++) {
         board[r] = [];
         for (let c = 0; c < columnCount; c++) {
-            if (emptySquaresOnInit.some(coords => coords[0] === r && coords[1] === c)) {
-                board[r][c] = new Cell(r, c, 0, CellStates.SAFE, false, false);
+            if (safeSquaresOnInit.some(coords => coords[0] === r && coords[1] === c)) {
+                board[r][c] = new Cell(r, c, 0, CellStates.SAFE, true, false);
             }
             else if (mineCoords.some(coords => coords.r === r && coords.c === c)) {
                 board[r][c] = new Cell(r, c, null, CellStates.MINE, false, false);
@@ -353,6 +357,9 @@ function initBoardOnClick(firstClickRow, firstClickCol) {
             }
         }
     }
+    const firstClickSquare = board[firstClickRow][firstClickCol];
+    firstClickSquare.isOpen = true;
+    updateCell(firstClickSquare);
     drawBoard();
 }
 function drawBoard() {
@@ -384,7 +391,7 @@ function getCellSurroundingMineCount(r, c, mineCoords) {
     }
     return surroundingMineCount;
 }
-function getMineCoordinatesOnInit(exemptCoords) {
+function generateMineCoordinatesOnInit(exemptCoords) {
     const isExempt = (r, c) => exemptCoords.some(([er, ec]) => er === r && ec === c);
     const mines = [];
     for (let i = 0; i < mineCount; i++) {
@@ -404,7 +411,7 @@ function getStoredDifficulty() {
 function getStoredZoom() {
     return localStorage.getItem('zoom');
 }
-function getNeighbours(r, c) {
+export function getNeighbours(r, c) {
     const directions = [
         [-1, -1], [-1, 0], [-1, 1],
         [0, -1], [0, 1],

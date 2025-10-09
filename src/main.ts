@@ -1,6 +1,7 @@
 import { Cell } from "./models/cell.js";
 import { CellStates } from "./models/cell-states.js";
 import { BoardDimensions } from "./models/board-dimensions.js";
+import { analyzeBoard } from "./solver.js";
 
 let board: Cell[][] = [];
 let previousBoardState: Cell[][] = [];
@@ -46,7 +47,6 @@ document.getElementById('space-btn')!.addEventListener('click', () => startGame(
 
 document.getElementById('continue-btn')!.addEventListener('click', () => handleContinueGame());
 
-
 const colsSlider = document.getElementById('cols-slider') as HTMLInputElement;
 colsSlider.oninput = () => {
     document.getElementById('cols-slider-value')!.innerHTML = colsSlider.value;
@@ -89,7 +89,10 @@ document.addEventListener('keyup', (e) => {
     const hoveredRowAndColumn = getHoveredRowAndColumn();
 
     const k = e.key.toLowerCase();
-    if (k === "f") handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+    if (k === "f") { 
+        handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]); 
+        analyzeBoard(board);
+    } 
 })
 
 document.addEventListener('mousedown', (e) => {
@@ -106,7 +109,10 @@ document.addEventListener('mouseup', (e) => {
 
     const hoveredRowAndColumn = getHoveredRowAndColumn();
 
-    if (e.button === 0) handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+    if (e.button === 0) { 
+        handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]) 
+        analyzeBoard(board);
+    };
 })
 
 function getHoveredRowAndColumn() {
@@ -134,10 +140,11 @@ function handleNewGame(difficulty: string, didClickDifficulty: boolean) {
 function setZoom() {
     const container = document.getElementById('board-container')!;
 
-    const originalHeight = rowCount! * 44;
+    //const originalSize = rowCount! * 44 + columnCount! * 44;
+    const originalSize = rowCount! * 44;
     const maxHeight = getHeightBetweenTopAndBottom() - 90; 
 
-    const scaleFactor = maxHeight / originalHeight;
+    const scaleFactor = maxHeight / originalSize;
 
     container.style.transform = `scale(${scaleFactor})`;
 }
@@ -150,7 +157,6 @@ function getHeightBetweenTopAndBottom() {
     const bottomBarHeight: number = bottomBarElem.offsetHeight;
     
     return window.innerHeight - topBarHeight - bottomBarHeight;
-    //return window.innerHeight - topBarHeight;
 }
 
 function resetDifficultiesUnderlines() {
@@ -219,18 +225,6 @@ function handleCellMain(r: number, c: number): void {
         handleFirstClick(r, c);
     }
 
-    checkIfGameLost(cell);
-    if (isGameLost) {
-        cell.isOpen = true;
-        updateCell(cell);
-    }
-
-    checkIfGameWon();
-    if (isGameWon) {
-        showMineLocations();
-        return;
-    }
-
     if (cell.isOpen) {
         handleChord(cell);
         return;
@@ -242,6 +236,16 @@ function handleCellMain(r: number, c: number): void {
 
     cell.isOpen = true;
     updateCell(cell);
+
+    checkIfGameLost(cell);
+    if (isGameLost) {
+        return;
+    }
+
+    checkIfGameWon();
+    if (isGameWon) {
+        showMineLocations();
+    }
 }
 
 function handleCellSecondary(r: number, c: number): void {
@@ -401,14 +405,14 @@ function initEmptyBoard() {
 }
 
 function initBoardOnClick(firstClickRow: number, firstClickCol: number): void {
-    const emptySquaresOnInit = [[firstClickRow, firstClickCol], ...getNeighbours(firstClickRow, firstClickCol).map(cell => [cell.r, cell.c])];
-    const mineCoords = getMineCoordinatesOnInit(emptySquaresOnInit);
+    const safeSquaresOnInit = [[firstClickRow, firstClickCol], ...getNeighbours(firstClickRow, firstClickCol).map(cell => [cell.r, cell.c])];
+    const mineCoords = generateMineCoordinatesOnInit(safeSquaresOnInit);
 
     for (let r = 0; r < rowCount!; r++) {
         board[r] = []
         for (let c = 0; c < columnCount!; c++) {
-            if (emptySquaresOnInit.some(coords => coords[0] === r && coords[1] === c)) {
-                board[r][c] = new Cell(r, c, 0, CellStates.SAFE, false, false);
+            if (safeSquaresOnInit.some(coords => coords[0] === r && coords[1] === c)) {
+                board[r][c] = new Cell(r, c, 0, CellStates.SAFE, true, false);
             } else if (mineCoords.some(coords => coords.r === r && coords.c === c)) {
                 board[r][c] = new Cell(r, c, null, CellStates.MINE, false, false);
             } else {
@@ -425,6 +429,10 @@ function initBoardOnClick(firstClickRow: number, firstClickCol: number): void {
             }
         }
     }
+
+    const firstClickSquare = board[firstClickRow][firstClickCol];
+    firstClickSquare.isOpen = true;
+    updateCell(firstClickSquare);
 
     drawBoard();
 }
@@ -466,7 +474,7 @@ function getCellSurroundingMineCount(r: number, c: number, mineCoords: any[]) {
     return surroundingMineCount;
 }
 
-function getMineCoordinatesOnInit(exemptCoords: number[][]) {
+function generateMineCoordinatesOnInit(exemptCoords: number[][]) {
     const isExempt = (r: number, c: number) =>
         exemptCoords.some(([er, ec]) => er === r && ec === c);
 
@@ -494,7 +502,7 @@ function getStoredZoom() {
     return localStorage.getItem('zoom')
 }
 
-function getNeighbours(r: number, c: number) {
+export function getNeighbours(r: number, c: number) {
     const directions = [
         [-1, -1], [-1, 0], [-1, 1],
         [0, -1], [0, 1],
