@@ -89,21 +89,6 @@ function getMapAsStringKey(map) {
         .join(';')
         .toString();
 }
-function doesValidMoveExist(curState, frontierCellCoordKeys) {
-    for (const coordKey of frontierCellCoordKeys) {
-        const isAlreadyAssignedMine = curState.get(coordKey) === true;
-        if (isAlreadyAssignedMine) {
-            continue;
-        }
-        const coordTuple = getCoordTupleFromKey(coordKey);
-        const r = coordTuple[0];
-        const c = coordTuple[1];
-        if (isSafeToPlaceMineAtCell(r, c, curState)) {
-            return true;
-        }
-    }
-    return false;
-}
 function handleMineOdds(validStates, openNumberCells, frontierCellCoordKeys) {
     const validMineStatesCoordsOnly = [];
     const validSafeStatesCoordsOnly = [];

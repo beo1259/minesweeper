@@ -30,7 +30,7 @@ function solve() {
 
         if (curStateStatus === undefined) { // new state
             stateStatusMap.set(curStateStringKey, 'unknown');
-        } else  {
+        } else {
             return curStateStatus === 'solved'; 
         } 
 
@@ -108,25 +108,6 @@ function getMapAsStringKey(map: Map<string, boolean>) {
         .localeCompare(b[0])).map(kv => `${kv[0]}=${kv[1] ? 1 : 0}`)
         .join(';')
         .toString();
-}
-
-function doesValidMoveExist(curState: Map<string, boolean>, frontierCellCoordKeys: Set<string>) {
-    for (const coordKey of frontierCellCoordKeys) {
-        const isAlreadyAssignedMine = curState.get(coordKey) === true;
-        if (isAlreadyAssignedMine) {
-            continue;
-        }
-
-        const coordTuple = getCoordTupleFromKey(coordKey);
-        const r = coordTuple[0];
-        const c = coordTuple[1];
-
-        if (isSafeToPlaceMineAtCell(r, c, curState)) {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 function handleMineOdds(validStates: Map<string, boolean>[], openNumberCells: PlayerKnownCell[], frontierCellCoordKeys: Set<string>) {
