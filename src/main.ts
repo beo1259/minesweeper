@@ -91,7 +91,7 @@ document.addEventListener('keyup', (e) => {
     const k = e.key.toLowerCase();
     if (k === "f") { 
         handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]); 
-        analyzeBoard(board);
+        //analyzeBoard(board);
     } 
 })
 
@@ -110,8 +110,8 @@ document.addEventListener('mouseup', (e) => {
     const hoveredRowAndColumn = getHoveredRowAndColumn();
 
     if (e.button === 0) { 
-        handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]) 
-        analyzeBoard(board);
+        handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]); 
+        //analyzeBoard(board);
     };
 })
 

@@ -1,7 +1,6 @@
 import { Cell } from "./models/cell.js";
 import { CellStates } from "./models/cell-states.js";
 import { BoardDimensions } from "./models/board-dimensions.js";
-import { analyzeBoard } from "./solver.js";
 let board = [];
 let previousBoardState = [];
 let boardDimensions = new BoardDimensions(16, 16); // default to medium board
@@ -75,7 +74,7 @@ document.addEventListener('keyup', (e) => {
     const k = e.key.toLowerCase();
     if (k === "f") {
         handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
-        analyzeBoard(board);
+        //analyzeBoard(board);
     }
 });
 document.addEventListener('mousedown', (e) => {
@@ -93,7 +92,7 @@ document.addEventListener('mouseup', (e) => {
     const hoveredRowAndColumn = getHoveredRowAndColumn();
     if (e.button === 0) {
         handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
-        analyzeBoard(board);
+        //analyzeBoard(board);
     }
     ;
 });

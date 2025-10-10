@@ -278,6 +278,10 @@ input[type="range"] {
     background-image: url('./assets/closed.svg');
 }
 
-.cell-mine-found {
-    background-image: url('./assets/mine_found.svg');
+.cell-red-hue {
+    filter: hue-rotate(90deg);
+}
+
+.cell-green-hue {
+    filter: hue-rotate(300deg);
 }

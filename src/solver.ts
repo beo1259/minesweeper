@@ -20,56 +20,153 @@ function solve() {
     const frontierCellCoordKeys: Set<string> = new Set(frontier.map(c => getCoordKey(c.r, c.c)));
     const openNumberCellCoordKeys: Set<string> = new Set(openNumberCells.map(c => getCoordKey(c.r, c.c)));
 
-    let visited: Set<string> = new Set();
-
-    const curMineAssignmentState: Map<string, boolean> = 
-        new Map(Array.from(frontierCellCoordKeys).map(key => [key, false])); // true = mine, false = safe
-
+    const curState: Map<string, boolean> = getDefaultState(frontierCellCoordKeys); // true = mine, false = safe
     const validStates: Map<string, boolean>[] = [];
+    const stateStatusMap: Map<string, 'unknown'|'dead'|'solved'> = new Map();
 
-    function backtrack(curMineAssignmentState: Map<string, boolean>) {
-        if (areAllNumberedCellsSatisfied(curMineAssignmentState, openNumberCellCoordKeys)) {
-            validStates.push(curMineAssignmentState);
-            curMineAssignmentState = new Map();
-            visited = new Set();
-            console.log('all numbers satisfied');
-            return;
+    function backtrack(curState: Map<string, boolean>) {
+        const curStateStringKey = getMapAsStringKey(curState);
+        const curStateStatus = stateStatusMap.get(curStateStringKey);
+
+        if (curStateStatus === undefined) { // new state
+            stateStatusMap.set(curStateStringKey, 'unknown');
+        } else  {
+            return curStateStatus === 'solved'; 
+        } 
+
+        // base case: we've found a valid state
+        if (areAllNumberedCellsSatisfied(curState, openNumberCellCoordKeys)) {
+            stateStatusMap.set(curStateStringKey, 'solved')
+            validStates.push(curState);
+            return true;
         }
 
-        let canPlaceMine = false;
-        let i = 0;
-        while (!canPlaceMine) {
-            console.log(frontierCellCoordKeys.size - 1 <= i, visited);
-            // if we aren't out of bounds and haven't visited this cell yet, it is a candidate
-            if (frontierCellCoordKeys.size - 1 >= i) {
-                const cellKey = [...frontierCellCoordKeys][i];
+        const nextPossibleStates = getNextPossibleValidStates(curState, frontierCellCoordKeys, stateStatusMap);
+        if (nextPossibleStates.length === 0) {
+            stateStatusMap.set(curStateStringKey, 'dead');
+            return false;
+        }
 
-                if (!visited.has([...frontierCellCoordKeys][i])) {
-                    const cellCoords = getCoordTupleFromKey(cellKey);
+        let anySolved = false;
+        for (const state of nextPossibleStates) {
+            const possibleStateStringKey = getMapAsStringKey(state);
+            const possibleStateStatus = stateStatusMap.get(possibleStateStringKey);
 
-                    if (isSafeToPlaceMineAtCell(cellCoords[0], cellCoords[1], curMineAssignmentState)) {
-                        console.log('is safe to place mine at', cellKey);
-                        curMineAssignmentState.set(cellKey, true);
-                        canPlaceMine = true;
-                        backtrack(curMineAssignmentState);
-                    }
-
-                    console.log('past safety check');
-
-                    i++;
-                }
-            } else {
-                return;
+            if (possibleStateStatus === 'dead' || possibleStateStatus === 'solved') {
+                continue;
             }
+
+            if(backtrack(state)) {
+                anySolved = true;
+            }
+        }
+
+        if (anySolved) {
+            stateStatusMap.set(curStateStringKey, 'solved');
+            return true;
+        } else {
+            stateStatusMap.set(curStateStringKey, 'dead');
+            return false;
         }
     }
 
-    // for (const f of frontierCellCoordKeys) {
-    //     curMineAssignmentState.set(f, true);
-    //     backtrack(curMineAssignmentState);
-    // }
+    backtrack(curState);
+    handleMineOdds(validStates, openNumberCells, frontierCellCoordKeys);
+}
 
-    console.log(validStates);
+function getNextPossibleValidStates(curState: Map<string, boolean>, frontierCellCoordKeys: Set<string>, stateStatusMap: Map<string, 'unknown'|'dead'|'solved'>) {
+    const curStateStatus = stateStatusMap.get(getMapAsStringKey(curState));
+    if (curStateStatus  !== undefined && (curStateStatus === 'dead' || curStateStatus === 'solved')) {
+        return [];
+    }
+
+    const nextPossibleStates: Map<string, boolean>[] = [];
+
+    for (const coordKey of frontierCellCoordKeys) {
+        if (curState.get(coordKey) === true) {
+            continue;
+        }
+
+        const coordTuple = getCoordTupleFromKey(coordKey);
+        const r = coordTuple[0];
+        const c = coordTuple[1];
+
+        const curStateDeepCopy: Map<string, boolean> = new Map(curState);
+        if (isSafeToPlaceMineAtCell(r, c, curState)) {
+            curStateDeepCopy.set(coordKey, true);
+            nextPossibleStates.push(curStateDeepCopy);
+        }
+    }
+
+    return nextPossibleStates;
+}
+
+function getMapAsStringKey(map: Map<string, boolean>) {
+    // create a canonical key that is sorted deterministically, only strings are keys, convert true/false to 1/0
+    return Array.from(map.entries())
+        .sort((a, b) => a[0]
+        .localeCompare(b[0])).map(kv => `${kv[0]}=${kv[1] ? 1 : 0}`)
+        .join(';')
+        .toString();
+}
+
+function doesValidMoveExist(curState: Map<string, boolean>, frontierCellCoordKeys: Set<string>) {
+    for (const coordKey of frontierCellCoordKeys) {
+        const isAlreadyAssignedMine = curState.get(coordKey) === true;
+        if (isAlreadyAssignedMine) {
+            continue;
+        }
+
+        const coordTuple = getCoordTupleFromKey(coordKey);
+        const r = coordTuple[0];
+        const c = coordTuple[1];
+
+        if (isSafeToPlaceMineAtCell(r, c, curState)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function handleMineOdds(validStates: Map<string, boolean>[], openNumberCells: PlayerKnownCell[], frontierCellCoordKeys: Set<string>) {
+    const validMineStatesCoordsOnly: Set<string>[] = [];
+    const validSafeStatesCoordsOnly: Set<string>[] = [];
+
+    for (const state of validStates) {
+        const mineCoords: Set<string> = new Set();
+        const safeCoords: Set<string> = new Set();
+
+        for (const [coordKey, isMine] of state.entries())  {
+            if (isMine) {
+                mineCoords.add(coordKey);
+            } else {
+                safeCoords.add(coordKey);
+            }
+        }
+
+        validMineStatesCoordsOnly.push(mineCoords);
+        validSafeStatesCoordsOnly.push(safeCoords);
+    }
+
+
+    const mineProbabilities = getCellProbabilities(validMineStatesCoordsOnly, 1);
+
+    for (const [coordKey, mineProbability] of mineProbabilities.entries()) {
+        if (mineProbability === 1) {
+            const coordTuple = getCoordTupleFromKey(coordKey);
+            highlightAsMine(coordTuple[0], coordTuple[1]);
+        }
+    }
+
+    const safeProbabilities = getCellProbabilities(validSafeStatesCoordsOnly, 0);
+
+    for (const [coordKey, safeProbability] of safeProbabilities.entries()) {
+        if (safeProbability === 1) {
+            const coordTuple = getCoordTupleFromKey(coordKey);
+            highlightAsSafe(coordTuple[0], coordTuple[1]);
+        }
+    }
 }
 
 function areAllNumberedCellsSatisfied(assignedMineCoordKeys: Map<string, boolean>, openNumberCellCoordKeys: Set<string>) {
@@ -91,6 +188,24 @@ function areAllNumberedCellsSatisfied(assignedMineCoordKeys: Map<string, boolean
     return true;
 }
 
+function areMapsEqual(a: Map<string, boolean>, b: Map<string, boolean>): boolean {
+  if (a.size !== b.size) return false;
+  for (const [k, v] of a) {
+    if (!b.has(k) || b.get(k) !== v) return false;
+  }
+  return true;
+}
+
+function mapArrayContainsMap(mapToCheck: Map<string, boolean>, arr: Map<string, boolean>[]) {
+    for (const map of arr) {
+        if (areMapsEqual(mapToCheck, map)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function isSafeToPlaceMineAtCell(r: number, c: number, assignedMineCoordKeys: Map<string, boolean>) {
     const numberedNeighbours = getPlayerKnownNeighbours(r, c)
         .filter(n => n.knownValue !== null && n.knownValue > 0);
@@ -108,9 +223,9 @@ function isSafeToPlaceMineAtCell(r: number, c: number, assignedMineCoordKeys: Ma
     return true;
 }
 
-function getMineCellProbabilities(validMineAssignmentConfigurations: Set<string>[]) {
+function getCellProbabilities(validAssignments: Set<string>[], mineOrSafe: 1 | 0) {
     const numberOfAppearancesByCoordKey: Map<string, number> = new Map();
-    for (const config of validMineAssignmentConfigurations) {
+    for (const config of validAssignments) {
         config.forEach(coordKey => {
             if (!numberOfAppearancesByCoordKey.has(coordKey)) {
                 numberOfAppearancesByCoordKey.set(coordKey, 1);
@@ -120,14 +235,12 @@ function getMineCellProbabilities(validMineAssignmentConfigurations: Set<string>
         });
     }
 
-    console.log("mine cell appearances:", numberOfAppearancesByCoordKey);
-
-    const mineProbabilityByKey: Map<string, number> = new Map();
+    const cellProbabilityByKey: Map<string, number> = new Map();
     numberOfAppearancesByCoordKey.forEach((appearances: number, coordKey: string) => {
-        mineProbabilityByKey.set(coordKey, appearances / validMineAssignmentConfigurations.length);
+        cellProbabilityByKey.set(coordKey, appearances / validAssignments.length);
     });
 
-    return mineProbabilityByKey;
+    return cellProbabilityByKey;
 }
 
 function setStartingKnowledge(frontierArr: PlayerKnownCell[], openNumberCellsArr: PlayerKnownCell[]) {
@@ -146,22 +259,8 @@ function setStartingKnowledge(frontierArr: PlayerKnownCell[], openNumberCellsArr
     }
 }
 
-function setCertainMineCells(openNumberCells: PlayerKnownCell[], frontierCellCoordKeys: Set<string>, currentlyAssignedMines: PlayerKnownCell[]) {
-    if (currentlyAssignedMines.length !== 0) {
-        throw new Error("currentlyAssignedMines should be empty")
-    }
-
-    for (const onc of openNumberCells) {
-        const oncNeighbours = getPlayerKnownNeighbours(onc.r, onc.c);
-
-        const neighbouringFrontierCells = oncNeighbours.filter(n => frontierCellCoordKeys.has(getCoordKey(n.r, n.c)));
-        if (neighbouringFrontierCells.length === onc.knownValue) {
-            for (const n of neighbouringFrontierCells) {
-                currentlyAssignedMines.push(knownBoard[n.r][n.c]);
-                highlightAsMine(n.r, n.c);
-            }
-        }
-    }
+function getDefaultState(frontierCellCoordKeys: Set<string>) {
+        return new Map(Array.from(frontierCellCoordKeys).map(key => [key, false]))
 }
 
 function resetClosedCellHighlights() {
@@ -178,7 +277,13 @@ function resetClosedCellHighlights() {
 }
 
 function highlightAsMine(r: number, c: number) {
-    document.getElementById(`cell_${r}_${c}`)!.className = 'cell cell-mine-found';
+    const className = _backendBoard[r][c].isFlagged ? 'cell cell-flag cell-red-hue' : 'cell cell-closed cell-red-hue';
+    document.getElementById(`cell_${r}_${c}`)!.className = className;
+}
+
+function highlightAsSafe(r: number, c: number) {
+    const className = _backendBoard[r][c].isFlagged ? 'cell cell-flag cell-green-hue' : 'cell cell-closed cell-green-hue';
+    document.getElementById(`cell_${r}_${c}`)!.className = className;
 }
 
 function getCoordKey(r: number, c: number) {
