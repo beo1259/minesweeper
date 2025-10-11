@@ -5,8 +5,12 @@
             <div class="col-container">
                 <p class="top-bar-item title">minesweeper</p>
             </div>
-            <div class="new-game-container">
+            <div class="col-container" style="align-items: center; gap: 10px">
                 <p id="space-btn">new game (space bar)</p>
+                <div class="row-container">
+                    <p id="viable-moves-txt">show viable moves</p>
+                    <input type="checkbox" id="hint-checkbox">
+                </div>
             </div>
             <div class="row-container top-bar-item difficulty-btns">
                 <p id="easy-btn" class="easy-txt difficulty-txt">easy</p>
@@ -16,6 +20,7 @@
         </div>
 
         <div id="board-container"></div>
+
         <div id="game-over-container" class="row-container">
             <p id="game-state-msg"></p>
             <p id="continue-btn"> continue?</p>

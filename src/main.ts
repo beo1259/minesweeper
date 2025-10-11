@@ -1,7 +1,8 @@
 import { Cell } from "./models/cell.js";
 import { CellStates } from "./models/cell-states.js";
 import { BoardDimensions } from "./models/board-dimensions.js";
-import { analyzeBoard } from "./solver.js";
+import { analyzeBoard, getCoordKey, cleanupSolverCache } from "./solver.js";
+import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES } from './constants.js';
 
 let board: Cell[][] = [];
 let previousBoardState: Cell[][] = [];
@@ -18,6 +19,10 @@ let mineCount: number | undefined;
 let curHoveredCellDataset: DOMStringMap | null = null;
 
 let currentlyXrayedCell: number[] = [];
+
+let hasShownHintForCurrentMove: boolean = true;
+
+let shouldShowViableMoves: boolean = false;
 
 enum Difficulties {
     EASY = "easy",
@@ -45,6 +50,12 @@ document.getElementById('expert-btn')!.addEventListener('click', () => handleNew
 
 document.getElementById('space-btn')!.addEventListener('click', () => startGame());
 
+const hintCheckbox = document.getElementById('hint-checkbox')! as HTMLInputElement;
+hintCheckbox.addEventListener('click', () => { 
+    shouldShowViableMoves = hintCheckbox.checked;
+    checkIfShouldShowViableMoves(); 
+});
+
 document.getElementById('continue-btn')!.addEventListener('click', () => handleContinueGame());
 
 const colsSlider = document.getElementById('cols-slider') as HTMLInputElement;
@@ -52,12 +63,14 @@ colsSlider.oninput = () => {
     document.getElementById('cols-slider-value')!.innerHTML = colsSlider.value;
     columnCount = parseInt(colsSlider.value); 
     handleNewGame(getStoredDifficulty()!, false)
+    minesSlider.max = getMaxMineCount().toString();
 };
 const rowsSlider = document.getElementById('rows-slider') as HTMLInputElement;
 rowsSlider.oninput = () => {
     document.getElementById('rows-slider-value')!.innerHTML = rowsSlider.value;
     rowCount = parseInt(rowsSlider.value); 
     handleNewGame(getStoredDifficulty()!, false)
+    minesSlider.max = getMaxMineCount().toString();
 };
 const minesSlider = document.getElementById('mines-slider') as HTMLInputElement;
 minesSlider.oninput = () => {
@@ -74,8 +87,8 @@ document.addEventListener('keydown', (e) => {
     const hoveredRowAndColumn = getHoveredRowAndColumn();
 
     const k = e.key.toLowerCase();
-    if (k === "f") handleOpenCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
-    else if (k === "g") handleCellSecondary(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+    if (k === "f") handleOpenCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+    else if (k === "g") handleCellSecondaryClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
 })
 
 document.addEventListener('keyup', (e) => {
@@ -89,19 +102,8 @@ document.addEventListener('keyup', (e) => {
     const hoveredRowAndColumn = getHoveredRowAndColumn();
 
     const k = e.key.toLowerCase();
-    if (k === "f") { 
-        handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]); 
-        //analyzeBoard(board);
-    } 
-})
+    if (k === "f") processCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]); 
 
-document.addEventListener('mousedown', (e) => {
-    if (!shouldProcessInput()) return;
-
-    const hoveredRowAndColumn = getHoveredRowAndColumn();
-
-    if (e.button === 0) handleOpenCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
-    else if (e.button === 2) handleCellSecondary(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
 })
 
 document.addEventListener('mouseup', (e) => {
@@ -109,18 +111,31 @@ document.addEventListener('mouseup', (e) => {
 
     const hoveredRowAndColumn = getHoveredRowAndColumn();
 
-    if (e.button === 0) { 
-        handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]); 
-        //analyzeBoard(board);
-    };
+    if (e.button === 0) processCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]); 
 })
+
+document.addEventListener('mousedown', (e) => {
+    if (!shouldProcessInput()) return;
+
+    const hoveredRowAndColumn = getHoveredRowAndColumn();
+
+    if (e.button === 0) handleOpenCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+    else if (e.button === 2) handleCellSecondaryClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+})
+
+function processCellMainClick(r: number, c: number) {
+    const cell = board[r][c];
+
+    handleCellMainClick(r, c);
+    checkIfShouldShowViableMoves();
+}
 
 function getHoveredRowAndColumn() {
     return [parseInt(curHoveredCellDataset!.row!), parseInt(curHoveredCellDataset!.col!)];
 }
 
 function shouldProcessInput() {
-    return !isGameLost && !isGameWon && curHoveredCellDataset?.row && curHoveredCellDataset?.col;
+    return !isGameLost && !isGameWon && curHoveredCellDataset?.row !== undefined && curHoveredCellDataset?.col !== undefined;
 }
 
 function handleNewGame(difficulty: string, didClickDifficulty: boolean) {
@@ -137,15 +152,25 @@ function handleNewGame(difficulty: string, didClickDifficulty: boolean) {
     startGame();
 }
 
+function getMaxMineCount() {
+    return rowCount! * columnCount! - 10;
+}
+
 function setZoom() {
     const container = document.getElementById('board-container')!;
 
-    //const originalSize = rowCount! * 44 + columnCount! * 44;
-    const originalSize = rowCount! * 44;
+    const originalHeight = rowCount! * 44;
+    //const originalWidth = columnCount! * 44;
+
     const maxHeight = getHeightBetweenTopAndBottom() - 90; 
+    //const maxWidth = window.innerWidth - 320; 
 
-    const scaleFactor = maxHeight / originalSize;
+    // const heightScale = maxHeight / originalHeight;
+    // const widthScale = maxWidth / originalWidth;
 
+    //const scaleFactor = Math.min(heightScale, widthScale);
+    
+    const scaleFactor = maxHeight / originalHeight;
     container.style.transform = `scale(${scaleFactor})`;
 }
 
@@ -173,15 +198,52 @@ function startGame() {
 
     initEmptyBoard();
     setNewGameStyles();
+    cleanupSolverCache();
 }
 
-function handleOpenCellMain(r: number, c: number) {
+function checkIfShouldShowViableMoves() {
+    if (!areAnyCellsOpen()) return;
+
+    if (!shouldShowViableMoves) {
+        hideViableMoves();
+    } else {
+        analyzeBoard(board, rowCount!, columnCount!);
+        hasShownHintForCurrentMove = true;
+    }
+}
+
+function hideViableMoves() {
+    for (const row of board) {
+        for (const cell of row) {
+            const elem = getHtmlElementByCoords(cell.r, cell.c);
+            elem?.classList.remove(SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME);
+        }
+    }
+}
+
+function areAnyCellsOpen() {
+    let atLeastOneCellOpen = false;
+    for (const row of board) {
+        for (const cell of row) {
+            if (cell.isOpen)  {
+                atLeastOneCellOpen = true;
+                break;
+            }
+        }
+
+        if (atLeastOneCellOpen) break;
+    }
+
+    return atLeastOneCellOpen;
+}
+
+function handleOpenCellMainClick(r: number, c: number) {
     const cell = board[r][c];
     if (!cell.isOpen) {
         return;
     }
 
-    xrayNeighbours(r, c)
+    xrayNeighbours(r, c);
 }
 
 function xrayNeighbours(r: number, c: number) {
@@ -211,7 +273,7 @@ function hidePreviouslyXrayedNeigbours() {
     }
 }
 
-function handleCellMain(r: number, c: number): void {
+function handleCellMainClick(r: number, c: number): void {
     previousBoardState = JSON.parse(JSON.stringify(board));
 
     hidePreviouslyXrayedNeigbours();
@@ -220,6 +282,8 @@ function handleCellMain(r: number, c: number): void {
     if (cell.isFlagged) {
         return;
     }
+
+    hasShownHintForCurrentMove = false;
 
     if (isFirtClick) {
         handleFirstClick(r, c);
@@ -248,7 +312,7 @@ function handleCellMain(r: number, c: number): void {
     }
 }
 
-function handleCellSecondary(r: number, c: number): void {
+function handleCellSecondaryClick(r: number, c: number): void {
     const cell = board[r][c];
     if (cell.isOpen) {
         return;
@@ -293,6 +357,10 @@ function handleContinueGame() {
 
     isGameLost = false;
     setNewGameStyles();
+
+    if (shouldShowViableMoves) {
+        analyzeBoard(board, rowCount!, columnCount!);
+    }
 }
 
 function setNewGameStyles() {
@@ -309,12 +377,14 @@ function setNewGameStyles() {
 }
 
 function setSliderValues() {
+    minesSlider.max = getMaxMineCount().toString();
+
     document.getElementById('cols-slider-value')!.innerHTML = columnCount!.toString();
     document.getElementById('rows-slider-value')!.innerHTML = rowCount!.toString();
     document.getElementById('mines-slider-value')!.innerHTML = mineCount!.toString();
-    (document.getElementById('cols-slider') as HTMLInputElement).value = columnCount!.toString();
-    (document.getElementById('rows-slider') as HTMLInputElement).value = rowCount!.toString();
-    (document.getElementById('mines-slider') as HTMLInputElement).value = mineCount!.toString();
+    colsSlider.value = columnCount!.toString();
+    rowsSlider.value = rowCount!.toString();
+    minesSlider.value = mineCount!.toString();
 }
 
 function showMineLocations() {
@@ -498,11 +568,7 @@ function getStoredDifficulty() {
     return localStorage.getItem('difficulty')
 }
 
-function getStoredZoom() {
-    return localStorage.getItem('zoom')
-}
-
-export function getNeighbours(r: number, c: number) {
+function getNeighbours(r: number, c: number) {
     const directions = [
         [-1, -1], [-1, 0], [-1, 1],
         [0, -1], [0, 1],
@@ -569,12 +635,17 @@ function getCellClassName(cell: Cell): string {
     }
 }
 
+// TODO - check if class has a default cell name (defined them above) and if so just remove it rather than setting it entirely fresh (so i can no remove the cell visibility);
 function updateCell(updatedCell: Cell) {
+    const elem = getHtmlElementByCoords(updatedCell.r, updatedCell.c)!
+
     if (updatedCell.isFlagged) {
         updatedCell.isOpen = false;
     } else if (updatedCell.isOpen) {
         updatedCell.isFlagged = false;
+        SOLVED_CELL_CLASSNAMES.forEach(className => elem.classList.remove(className));
     }
-
-    getHtmlElementByCoords(updatedCell.r, updatedCell.c)!.className = `cell ${getCellClassName(updatedCell)}`;
+    
+    DEFAULT_CELL_CLASSNAMES.forEach(className => elem.classList.remove(className));
+    elem.classList.add(getCellClassName(updatedCell));
 }

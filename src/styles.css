@@ -60,10 +60,6 @@ p {
     align-items: center;
 }
 
-.new-game-container {
-    color: rgba(255, 255, 255, 0.4);
-}
-
 #space-btn {
     color: rgb(230, 230, 230);
     font-size: 22px;
@@ -73,6 +69,42 @@ p {
 #space-btn:hover {
     cursor: pointer;
     text-decoration-color: white;
+}
+
+#viable-moves-txt {
+    color: gold;
+    font-size: 18px;
+    padding-right: 3px;
+}
+input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 15px;
+    height: 15px;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    position: relative;
+    vertical-align: middle;
+    border: 1px solid white;
+    border-radius: 3px;
+}
+
+input[type="checkbox"]:checked {
+}
+
+input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    left: 5px;
+    width: 2px;
+    height: 6px;
+    border: solid gold;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
 }
 
 .col-container {
@@ -134,7 +166,7 @@ p {
 }
 
 #game-over-container {
-    display: flex;
+    display: none;
     position: absolute;
     align-items: center;
     justify-content: center;
@@ -171,6 +203,27 @@ p {
     margin-bottom: 35px;
 }
 
+.side-panel {
+    position: absolute;
+    color: white;
+    font-size: 18px;
+    padding: 90px 50px;
+    border: 3px solid white;
+    max-height: 100px;
+}
+
+#left-panel {
+    top: 50%;
+    left: 50%;
+    left: 20px;
+}
+
+#right-panel {
+    top: 50%;
+    left: 50%;
+    right: 20px;
+}
+
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
@@ -187,6 +240,13 @@ input[type="range"]::-webkit-slider-thumb {
 
 #mines-slider::-webkit-slider-thumb {
     background-image: url('./assets/mine.svg'); 
+}
+
+#stage {
+  display: grid;
+  grid-template-columns: 260px auto 260px;
+  gap: 24px;
+  align-items: start;
 }
 
 input[type="range"] {
@@ -278,10 +338,11 @@ input[type="range"] {
     background-image: url('./assets/closed.svg');
 }
 
-.cell-red-hue {
-    filter: hue-rotate(90deg);
+.cell-solved-mine {
+    border: 3px solid red;
 }
 
-.cell-green-hue {
-    filter: hue-rotate(300deg);
+.cell-solved-safe {
+    border: 3px solid rgb(0, 230, 0);
+;
 }

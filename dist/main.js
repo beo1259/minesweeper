@@ -1,6 +1,8 @@
 import { Cell } from "./models/cell.js";
 import { CellStates } from "./models/cell-states.js";
 import { BoardDimensions } from "./models/board-dimensions.js";
+import { analyzeBoard, cleanupSolverCache } from "./solver.js";
+import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES } from './constants.js';
 let board = [];
 let previousBoardState = [];
 let boardDimensions = new BoardDimensions(16, 16); // default to medium board
@@ -12,6 +14,8 @@ let rowCount;
 let mineCount;
 let curHoveredCellDataset = null;
 let currentlyXrayedCell = [];
+let hasShownHintForCurrentMove = true;
+let shouldShowViableMoves = false;
 var Difficulties;
 (function (Difficulties) {
     Difficulties["EASY"] = "easy";
@@ -33,18 +37,25 @@ document.getElementById('easy-btn').addEventListener('click', () => handleNewGam
 document.getElementById('medium-btn').addEventListener('click', () => handleNewGame('medium', true));
 document.getElementById('expert-btn').addEventListener('click', () => handleNewGame('expert', true));
 document.getElementById('space-btn').addEventListener('click', () => startGame());
+const hintCheckbox = document.getElementById('hint-checkbox');
+hintCheckbox.addEventListener('click', () => {
+    shouldShowViableMoves = hintCheckbox.checked;
+    checkIfShouldShowViableMoves();
+});
 document.getElementById('continue-btn').addEventListener('click', () => handleContinueGame());
 const colsSlider = document.getElementById('cols-slider');
 colsSlider.oninput = () => {
     document.getElementById('cols-slider-value').innerHTML = colsSlider.value;
     columnCount = parseInt(colsSlider.value);
     handleNewGame(getStoredDifficulty(), false);
+    minesSlider.max = getMaxMineCount().toString();
 };
 const rowsSlider = document.getElementById('rows-slider');
 rowsSlider.oninput = () => {
     document.getElementById('rows-slider-value').innerHTML = rowsSlider.value;
     rowCount = parseInt(rowsSlider.value);
     handleNewGame(getStoredDifficulty(), false);
+    minesSlider.max = getMaxMineCount().toString();
 };
 const minesSlider = document.getElementById('mines-slider');
 minesSlider.oninput = () => {
@@ -59,9 +70,9 @@ document.addEventListener('keydown', (e) => {
     const hoveredRowAndColumn = getHoveredRowAndColumn();
     const k = e.key.toLowerCase();
     if (k === "f")
-        handleOpenCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+        handleOpenCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
     else if (k === "g")
-        handleCellSecondary(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+        handleCellSecondaryClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
 });
 document.addEventListener('keyup', (e) => {
     if (e.key === " ") {
@@ -72,35 +83,35 @@ document.addEventListener('keyup', (e) => {
         return;
     const hoveredRowAndColumn = getHoveredRowAndColumn();
     const k = e.key.toLowerCase();
-    if (k === "f") {
-        handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
-        //analyzeBoard(board);
-    }
+    if (k === "f")
+        processCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+});
+document.addEventListener('mouseup', (e) => {
+    if (!shouldProcessInput())
+        return;
+    const hoveredRowAndColumn = getHoveredRowAndColumn();
+    if (e.button === 0)
+        processCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
 });
 document.addEventListener('mousedown', (e) => {
     if (!shouldProcessInput())
         return;
     const hoveredRowAndColumn = getHoveredRowAndColumn();
     if (e.button === 0)
-        handleOpenCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+        handleOpenCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
     else if (e.button === 2)
-        handleCellSecondary(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+        handleCellSecondaryClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
 });
-document.addEventListener('mouseup', (e) => {
-    if (!shouldProcessInput())
-        return;
-    const hoveredRowAndColumn = getHoveredRowAndColumn();
-    if (e.button === 0) {
-        handleCellMain(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
-        //analyzeBoard(board);
-    }
-    ;
-});
+function processCellMainClick(r, c) {
+    const cell = board[r][c];
+    handleCellMainClick(r, c);
+    checkIfShouldShowViableMoves();
+}
 function getHoveredRowAndColumn() {
     return [parseInt(curHoveredCellDataset.row), parseInt(curHoveredCellDataset.col)];
 }
 function shouldProcessInput() {
-    return !isGameLost && !isGameWon && curHoveredCellDataset?.row && curHoveredCellDataset?.col;
+    return !isGameLost && !isGameWon && curHoveredCellDataset?.row !== undefined && curHoveredCellDataset?.col !== undefined;
 }
 function handleNewGame(difficulty, didClickDifficulty) {
     localStorage.setItem('difficulty', difficulty);
@@ -113,12 +124,19 @@ function handleNewGame(difficulty, didClickDifficulty) {
     setZoom();
     startGame();
 }
+function getMaxMineCount() {
+    return rowCount * columnCount - 10;
+}
 function setZoom() {
     const container = document.getElementById('board-container');
-    //const originalSize = rowCount! * 44 + columnCount! * 44;
-    const originalSize = rowCount * 44;
+    const originalHeight = rowCount * 44;
+    //const originalWidth = columnCount! * 44;
     const maxHeight = getHeightBetweenTopAndBottom() - 90;
-    const scaleFactor = maxHeight / originalSize;
+    //const maxWidth = window.innerWidth - 320; 
+    // const heightScale = maxHeight / originalHeight;
+    // const widthScale = maxWidth / originalWidth;
+    //const scaleFactor = Math.min(heightScale, widthScale);
+    const scaleFactor = maxHeight / originalHeight;
     container.style.transform = `scale(${scaleFactor})`;
 }
 function getHeightBetweenTopAndBottom() {
@@ -140,8 +158,42 @@ function startGame() {
     isFirtClick = true;
     initEmptyBoard();
     setNewGameStyles();
+    cleanupSolverCache();
 }
-function handleOpenCellMain(r, c) {
+function checkIfShouldShowViableMoves() {
+    if (!areAnyCellsOpen())
+        return;
+    if (!shouldShowViableMoves) {
+        hideViableMoves();
+    }
+    else {
+        analyzeBoard(board, rowCount, columnCount);
+        hasShownHintForCurrentMove = true;
+    }
+}
+function hideViableMoves() {
+    for (const row of board) {
+        for (const cell of row) {
+            const elem = getHtmlElementByCoords(cell.r, cell.c);
+            elem?.classList.remove(SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME);
+        }
+    }
+}
+function areAnyCellsOpen() {
+    let atLeastOneCellOpen = false;
+    for (const row of board) {
+        for (const cell of row) {
+            if (cell.isOpen) {
+                atLeastOneCellOpen = true;
+                break;
+            }
+        }
+        if (atLeastOneCellOpen)
+            break;
+    }
+    return atLeastOneCellOpen;
+}
+function handleOpenCellMainClick(r, c) {
     const cell = board[r][c];
     if (!cell.isOpen) {
         return;
@@ -169,13 +221,14 @@ function hidePreviouslyXrayedNeigbours() {
         getHtmlElementByCoords(n.r, n.c).className = 'cell cell-closed';
     }
 }
-function handleCellMain(r, c) {
+function handleCellMainClick(r, c) {
     previousBoardState = JSON.parse(JSON.stringify(board));
     hidePreviouslyXrayedNeigbours();
     const cell = board[r][c];
     if (cell.isFlagged) {
         return;
     }
+    hasShownHintForCurrentMove = false;
     if (isFirtClick) {
         handleFirstClick(r, c);
     }
@@ -197,7 +250,7 @@ function handleCellMain(r, c) {
         showMineLocations();
     }
 }
-function handleCellSecondary(r, c) {
+function handleCellSecondaryClick(r, c) {
     const cell = board[r][c];
     if (cell.isOpen) {
         return;
@@ -238,6 +291,9 @@ function handleContinueGame() {
     drawBoard();
     isGameLost = false;
     setNewGameStyles();
+    if (shouldShowViableMoves) {
+        analyzeBoard(board, rowCount, columnCount);
+    }
 }
 function setNewGameStyles() {
     document.getElementById('game-state-msg').innerHTML = '';
@@ -250,12 +306,13 @@ function setNewGameStyles() {
     setSliderValues();
 }
 function setSliderValues() {
+    minesSlider.max = getMaxMineCount().toString();
     document.getElementById('cols-slider-value').innerHTML = columnCount.toString();
     document.getElementById('rows-slider-value').innerHTML = rowCount.toString();
     document.getElementById('mines-slider-value').innerHTML = mineCount.toString();
-    document.getElementById('cols-slider').value = columnCount.toString();
-    document.getElementById('rows-slider').value = rowCount.toString();
-    document.getElementById('mines-slider').value = mineCount.toString();
+    colsSlider.value = columnCount.toString();
+    rowsSlider.value = rowCount.toString();
+    minesSlider.value = mineCount.toString();
 }
 function showMineLocations() {
     board.forEach(row => {
@@ -407,10 +464,7 @@ function generateMineCoordinatesOnInit(exemptCoords) {
 function getStoredDifficulty() {
     return localStorage.getItem('difficulty');
 }
-function getStoredZoom() {
-    return localStorage.getItem('zoom');
-}
-export function getNeighbours(r, c) {
+function getNeighbours(r, c) {
     const directions = [
         [-1, -1], [-1, 0], [-1, 1],
         [0, -1], [0, 1],
@@ -470,12 +524,16 @@ function getCellClassName(cell) {
         }
     }
 }
+// TODO - check if class has a default cell name (defined them above) and if so just remove it rather than setting it entirely fresh (so i can no remove the cell visibility);
 function updateCell(updatedCell) {
+    const elem = getHtmlElementByCoords(updatedCell.r, updatedCell.c);
     if (updatedCell.isFlagged) {
         updatedCell.isOpen = false;
     }
     else if (updatedCell.isOpen) {
         updatedCell.isFlagged = false;
+        SOLVED_CELL_CLASSNAMES.forEach(className => elem.classList.remove(className));
     }
-    getHtmlElementByCoords(updatedCell.r, updatedCell.c).className = `cell ${getCellClassName(updatedCell)}`;
+    DEFAULT_CELL_CLASSNAMES.forEach(className => elem.classList.remove(className));
+    elem.classList.add(getCellClassName(updatedCell));
 }
