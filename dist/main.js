@@ -16,19 +16,28 @@ let curHoveredCellDataset = null;
 let currentlyXrayedCell = [];
 let hasShownHintForCurrentMove = true;
 let shouldShowViableMoves = false;
+let shouldIncrementTime = false;
+let timerVal = 0;
+let timerId = 0;
+let isShowingHighScores = false;
 var Difficulties;
 (function (Difficulties) {
     Difficulties["EASY"] = "easy";
     Difficulties["MEDIUM"] = "medium";
     Difficulties["EXPERT"] = "expert";
 })(Difficulties || (Difficulties = {}));
+const difficultyStringToEnumKeyMap = new Map([
+    ["easy", Difficulties.EASY],
+    ["medium", Difficulties.MEDIUM],
+    ["expert", Difficulties.EXPERT],
+]);
 const difficultyToDimensionsMap = new Map([
     [Difficulties.EASY, new BoardDimensions(9, 9)],
     [Difficulties.MEDIUM, new BoardDimensions(16, 16)],
     [Difficulties.EXPERT, new BoardDimensions(30, 16)],
 ]);
 const mineCountMap = new Map([
-    [Difficulties.EASY, 10],
+    [Difficulties.EASY, 5],
     [Difficulties.MEDIUM, 40],
     [Difficulties.EXPERT, 99],
 ]);
@@ -37,6 +46,8 @@ document.getElementById('easy-btn').addEventListener('click', () => handleNewGam
 document.getElementById('medium-btn').addEventListener('click', () => handleNewGame('medium', true));
 document.getElementById('expert-btn').addEventListener('click', () => handleNewGame('expert', true));
 document.getElementById('space-btn').addEventListener('click', () => startGame());
+document.getElementById('high-scores-btn').addEventListener('click', () => showOrHideHighScores(true));
+document.getElementById('close-high-scores-btn').addEventListener('click', () => showOrHideHighScores(false));
 const hintCheckbox = document.getElementById('hint-checkbox');
 hintCheckbox.addEventListener('click', () => {
     shouldShowViableMoves = hintCheckbox.checked;
@@ -75,7 +86,7 @@ document.addEventListener('keydown', (e) => {
         handleCellSecondaryClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
 });
 document.addEventListener('keyup', (e) => {
-    if (e.key === " ") {
+    if (e.key === " " && !isShowingHighScores) {
         startGame();
         return;
     }
@@ -102,6 +113,36 @@ document.addEventListener('mousedown', (e) => {
     else if (e.button === 2)
         handleCellSecondaryClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
 });
+function showOrHideHighScores(shouldShow) {
+    isShowingHighScores = shouldShow;
+    setStylesOnHighScoresModelAction(shouldShow);
+}
+function setStylesOnHighScoresModelAction(shouldShow) {
+    const modal = document.getElementById('high-scores-modal');
+    modal.style.display = shouldShow ? 'flex' : 'none';
+    const allElements = document.getElementsByTagName('*');
+    for (const el of allElements) {
+        if (el === modal || modal.contains(el) || el.tagName === 'BODY' || el.tagName === 'HTML') {
+            continue;
+        }
+        const htmlEl = el;
+        if (shouldShow) {
+            htmlEl.style.opacity = '0.5';
+            htmlEl.style.pointerEvents = 'none';
+        }
+        else {
+            htmlEl.style.opacity = '1';
+            htmlEl.style.pointerEvents = 'auto';
+        }
+    }
+    if (shouldShow) {
+        for (const difficulty of Object.values(Difficulties)) {
+            const highScore = getHighScore(difficulty);
+            console.log(highScore);
+            document.getElementById(`${difficulty}-high-score`).innerHTML = Number.isNaN(highScore) ? 'never completed' : `${highScore} seconds`;
+        }
+    }
+}
 function processCellMainClick(r, c) {
     handleCellMainClick(r, c);
     checkIfShouldShowViableMoves();
@@ -110,7 +151,7 @@ function getHoveredRowAndColumn() {
     return [parseInt(curHoveredCellDataset.row), parseInt(curHoveredCellDataset.col)];
 }
 function shouldProcessInput() {
-    return !isGameLost && !isGameWon && curHoveredCellDataset?.row !== undefined && curHoveredCellDataset?.col !== undefined;
+    return !isShowingHighScores && !isGameLost && !isGameWon && curHoveredCellDataset?.row !== undefined && curHoveredCellDataset?.col !== undefined;
 }
 function handleNewGame(difficulty, didClickDifficulty) {
     localStorage.setItem('difficulty', difficulty);
@@ -152,6 +193,9 @@ function resetDifficultiesUnderlines() {
     });
 }
 function startGame() {
+    //localStorage.setItem('easy-high-score', '10');
+    clearTimer();
+    setTimerVal(0);
     isGameLost = false;
     isGameWon = false;
     isFirtClick = true;
@@ -166,7 +210,7 @@ function checkIfShouldShowViableMoves() {
         hideViableMoves();
     }
     else {
-        findViableMoves(board, rowCount, columnCount);
+        findViableMoves(board);
         hasShownHintForCurrentMove = true;
     }
 }
@@ -256,42 +300,63 @@ function handleCellSecondaryClick(r, c) {
     }
     else if (cell.isFlagged) {
         cell.isFlagged = false;
+        setFlagsLeft(getFlagsLeft() + 1);
     }
-    else {
+    else if (!cell.isFlagged && getFlagsLeft() > 0) {
         cell.isFlagged = true;
+        setFlagsLeft(getFlagsLeft() - 1);
     }
     updateCell(cell);
 }
 function checkIfGameLost(openedCell) {
-    if (openedCell.cellState === CellStates.MINE) {
-        isGameLost = true;
-        document.getElementById('game-state-msg').innerHTML = 'you lost;&nbsp;';
-        document.getElementById('game-state-msg').className = 'txt lose-msg';
-        document.getElementById('continue-btn').style.display = 'block';
-        document.getElementById('board-container').style.filter = 'blur(1px)';
-        document.getElementById('game-over-container').style.display = 'flex';
-        document.getElementById('game-over-container').style.boxShadow = '10px 10px 0 red, -10px -10px 0 red';
+    if (openedCell.cellState !== CellStates.MINE) {
+        return;
     }
+    shouldIncrementTime = false;
+    isGameLost = true;
+    document.getElementById('game-state-msg').innerHTML = 'you lost;&nbsp;';
+    document.getElementById('game-state-msg').className = 'txt lose-msg';
+    document.getElementById('continue-btn').style.display = 'block';
+    document.getElementById('board-container').style.filter = 'blur(1px)';
+    document.getElementById('game-over-container').style.display = 'flex';
+    document.getElementById('game-over-container').style.boxShadow = '10px 10px 0 red, -10px -10px 0 red';
 }
 function checkIfGameWon() {
     let closedCellsCount = 0;
-    board.forEach(row => row.forEach(cell => closedCellsCount += !cell.isOpen ? 1 : 0));
-    if (closedCellsCount === mineCount) {
-        isGameWon = true;
-        document.getElementById('game-state-msg').innerHTML = 'you won!';
-        document.getElementById('game-state-msg').className = 'txt win-msg';
-        document.getElementById('board-container').style.filter = 'blur(1px)';
-        document.getElementById('game-over-container').style.display = 'flex';
-        document.getElementById('game-over-container').style.boxShadow = '10px 10px 0 gold, -10px -10px 0 gold';
+    board.forEach(row => row.filter(cell => closedCellsCount += !cell.isOpen ? 1 : 0));
+    if (closedCellsCount !== mineCount) {
+        return;
+    }
+    shouldIncrementTime = false;
+    isGameWon = true;
+    document.getElementById('game-state-msg').innerHTML = 'you won!';
+    document.getElementById('game-state-msg').className = 'txt win-msg';
+    document.getElementById('board-container').style.filter = 'blur(1px)';
+    document.getElementById('game-over-container').style.display = 'flex';
+    document.getElementById('game-over-container').style.boxShadow = '10px 10px 0 gold, -10px -10px 0 gold';
+    checkIfShouldSetHighScore();
+}
+function checkIfShouldSetHighScore() {
+    if (!isPlayingOnNativeDifficulty()) {
+        return;
+    }
+    const difficulty = difficultyStringToEnumKeyMap.get(Array.from(difficultyToDimensionsMap.entries())
+        .filter(entry => entry[1].rows === rowCount && entry[1].columns === columnCount)[0][0]);
+    if (difficulty !== undefined) {
+        const currentHighScore = getHighScore(difficulty);
+        if (Number.isNaN(currentHighScore) || timerVal < currentHighScore) {
+            setHighScore(difficulty, timerVal);
+        }
     }
 }
 function handleContinueGame() {
+    shouldIncrementTime = true;
     board = previousBoardState;
     drawBoard();
     isGameLost = false;
     setNewGameStyles();
     if (shouldShowViableMoves) {
-        findViableMoves(board, rowCount, columnCount);
+        findViableMoves(board);
     }
 }
 function setNewGameStyles() {
@@ -300,9 +365,42 @@ function setNewGameStyles() {
     document.getElementById('board-container').style.filter = 'none';
     document.getElementById('continue-btn').style.display = 'none';
     document.getElementById('game-over-container').style.display = 'none';
-    resetDifficultiesUnderlines();
-    document.getElementById(`${localStorage.getItem('difficulty')}-btn`).classList.add("soft-underline");
     setSliderValues();
+    setFlagsLeft(mineCount);
+    resetDifficultiesUnderlines();
+    handleDifficultyUnderline();
+}
+function isPlayingOnNativeDifficulty() {
+    return Array.from(difficultyToDimensionsMap).some(val => val[1].rows === rowCount && val[1].columns === columnCount);
+}
+function handleDifficultyUnderline() {
+    if (isPlayingOnNativeDifficulty()) {
+        document.getElementById(`${localStorage.getItem('difficulty')}-btn`).classList.add("soft-underline");
+    }
+}
+function setFlagsLeft(newValue) {
+    document.getElementById('flags-left').innerHTML = newValue.toString();
+}
+function getFlagsLeft() {
+    return parseInt(document.getElementById('flags-left').innerHTML);
+}
+function startTimer() {
+    shouldIncrementTime = true;
+    timerVal = 0;
+    timerId = setInterval(() => {
+        if (shouldIncrementTime) {
+            timerVal++;
+        }
+        setTimerVal(timerVal);
+    }, 1000);
+}
+function clearTimer() {
+    clearInterval(timerId);
+    shouldIncrementTime = false;
+}
+function setTimerVal(value) {
+    timerVal = value;
+    document.getElementById('timer').innerHTML = `${timerVal.toString()}s`;
 }
 function setSliderValues() {
     minesSlider.max = getMaxMineCount().toString();
@@ -376,6 +474,7 @@ function floodAndFill(r, c) {
 function handleFirstClick(clickedRow, clickedCol) {
     initBoardOnClick(clickedRow, clickedCol);
     isFirtClick = false;
+    startTimer();
 }
 function initEmptyBoard() {
     board = [];
@@ -543,4 +642,14 @@ function assignCellDefaultClassName(r, c, classNameToAssign) {
     const elem = getHtmlElementByCoords(r, c);
     DEFAULT_CELL_CLASSNAMES.forEach(className => elem.classList.remove(className));
     elem.classList.add(classNameToAssign);
+}
+function getHighScore(difficulty) {
+    const storedHighScore = localStorage.getItem(`${difficulty}-high-score`);
+    if (storedHighScore === null) {
+        return NaN;
+    }
+    return parseInt(storedHighScore);
+}
+function setHighScore(difficulty, score) {
+    localStorage.setItem(`${difficulty}-high-score`, score.toString());
 }

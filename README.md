@@ -16,5 +16,4 @@ in separate terminal window:
  
 ## notes
 
-- currently missing timer & flag count
 - solver algorithm is not optimized and may take a while/crash the page on larger states (ie. midway through expert games)

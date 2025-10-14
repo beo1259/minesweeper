@@ -23,11 +23,23 @@ let currentlyXrayedCell: number[] = [];
 let hasShownHintForCurrentMove: boolean = true;
 let shouldShowViableMoves: boolean = false;
 
+let shouldIncrementTime: boolean = false;
+let timerVal: number = 0;
+let timerId: number = 0;
+
+let isShowingHighScores: boolean = false;
+
 enum Difficulties {
     EASY = "easy",
     MEDIUM = "medium",
     EXPERT = "expert",
 }
+
+const difficultyStringToEnumKeyMap: Map<string, Difficulties> = new Map([
+    ["easy", Difficulties.EASY],
+    ["medium", Difficulties.MEDIUM],
+    ["expert", Difficulties.EXPERT],
+])
 
 const difficultyToDimensionsMap: Map<string, BoardDimensions> = new Map([
     [Difficulties.EASY, new BoardDimensions(9, 9)],
@@ -36,7 +48,7 @@ const difficultyToDimensionsMap: Map<string, BoardDimensions> = new Map([
 ]);
 
 const mineCountMap: Map<string, number> = new Map([
-    [Difficulties.EASY, 10],
+    [Difficulties.EASY, 5],
     [Difficulties.MEDIUM, 40],
     [Difficulties.EXPERT, 99],
 ]);
@@ -49,6 +61,9 @@ document.getElementById('expert-btn')!.addEventListener('click', () => handleNew
 
 document.getElementById('space-btn')!.addEventListener('click', () => startGame());
 
+document.getElementById('high-scores-btn')!.addEventListener('click', () => showOrHideHighScores(true));
+document.getElementById('close-high-scores-btn')!.addEventListener('click', () => showOrHideHighScores(false));
+
 const hintCheckbox = document.getElementById('hint-checkbox')! as HTMLInputElement;
 hintCheckbox.addEventListener('click', () => { 
     shouldShowViableMoves = hintCheckbox.checked;
@@ -60,7 +75,9 @@ document.getElementById('continue-btn')!.addEventListener('click', () => handleC
 const colsSlider = document.getElementById('cols-slider') as HTMLInputElement;
 colsSlider.oninput = () => {
     document.getElementById('cols-slider-value')!.innerHTML = colsSlider.value;
+
     columnCount = parseInt(colsSlider.value); 
+
     handleNewGame(getStoredDifficulty()!, false)
     minesSlider.max = getMaxMineCount().toString();
 };
@@ -88,10 +105,10 @@ document.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     if (k === "f") handleOpenCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
     else if (k === "g") handleCellSecondaryClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
-})
+});
 
 document.addEventListener('keyup', (e) => {
-    if (e.key === " ") {
+    if (e.key === " " && !isShowingHighScores) {
         startGame();
         return;
     }
@@ -102,8 +119,7 @@ document.addEventListener('keyup', (e) => {
 
     const k = e.key.toLowerCase();
     if (k === "f") processCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]); 
-
-})
+});
 
 document.addEventListener('mouseup', (e) => {
     if (!shouldProcessInput()) return;
@@ -111,7 +127,7 @@ document.addEventListener('mouseup', (e) => {
     const hoveredRowAndColumn = getHoveredRowAndColumn();
 
     if (e.button === 0) processCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]); 
-})
+});
 
 document.addEventListener('mousedown', (e) => {
     if (!shouldProcessInput()) return;
@@ -120,7 +136,42 @@ document.addEventListener('mousedown', (e) => {
 
     if (e.button === 0) handleOpenCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
     else if (e.button === 2) handleCellSecondaryClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
-})
+});
+
+function showOrHideHighScores(shouldShow: boolean) {
+    isShowingHighScores = shouldShow;
+    setStylesOnHighScoresModelAction(shouldShow);
+}
+
+function setStylesOnHighScoresModelAction(shouldShow: boolean) {
+    const modal = document.getElementById('high-scores-modal')!;
+    modal.style.display = shouldShow ? 'flex' : 'none';
+
+    const allElements = document.getElementsByTagName('*');
+    for (const el of allElements) {
+        if (el === modal || modal.contains(el) || el.tagName === 'BODY' || el.tagName === 'HTML') {
+            continue;
+        }
+
+        const htmlEl = el as HTMLElement;
+
+        if (shouldShow) {
+            htmlEl.style.opacity = '0.5';
+            htmlEl.style.pointerEvents = 'none';
+        } else {
+            htmlEl.style.opacity = '1';
+            htmlEl.style.pointerEvents = 'auto';
+        }
+    }
+
+    if (shouldShow) {
+        for (const difficulty of Object.values(Difficulties)) {
+            const highScore = getHighScore(difficulty);
+            console.log(highScore);
+            document.getElementById(`${difficulty}-high-score`)!.innerHTML = Number.isNaN(highScore) ? 'never completed' : `${highScore} seconds`
+        }
+    }
+}
 
 function processCellMainClick(r: number, c: number) {
     handleCellMainClick(r, c);
@@ -132,7 +183,7 @@ function getHoveredRowAndColumn() {
 }
 
 function shouldProcessInput() {
-    return !isGameLost && !isGameWon && curHoveredCellDataset?.row !== undefined && curHoveredCellDataset?.col !== undefined;
+    return !isShowingHighScores && !isGameLost && !isGameWon && curHoveredCellDataset?.row !== undefined && curHoveredCellDataset?.col !== undefined;
 }
 
 function handleNewGame(difficulty: string, didClickDifficulty: boolean) {
@@ -143,7 +194,7 @@ function handleNewGame(difficulty: string, didClickDifficulty: boolean) {
         columnCount = boardDimensions.columns;
         rowCount = boardDimensions.rows;
         mineCount = mineCountMap.get(difficulty);
-    } 
+    }
 
     setZoom();
     startGame();
@@ -177,7 +228,7 @@ function getHeightBetweenTopAndBottom() {
 
     const bottomBarElem = document.getElementById('bottom-bar')!
     const bottomBarHeight: number = bottomBarElem.offsetHeight;
-    
+
     return window.innerHeight - topBarHeight - bottomBarHeight;
 }
 
@@ -189,6 +240,11 @@ function resetDifficultiesUnderlines() {
 }
 
 function startGame() {
+    //localStorage.setItem('easy-high-score', '10');
+
+    clearTimer();
+    setTimerVal(0);
+
     isGameLost = false;
     isGameWon = false;
     isFirtClick = true;
@@ -314,40 +370,70 @@ function handleCellSecondaryClick(r: number, c: number): void {
         return;
     } else if (cell.isFlagged) {
         cell.isFlagged = false
-    } else {
+        setFlagsLeft(getFlagsLeft() + 1);
+    } else if (!cell.isFlagged && getFlagsLeft() > 0){
         cell.isFlagged = true;
+        setFlagsLeft(getFlagsLeft() - 1);
     }
 
     updateCell(cell)
 }
 
 function checkIfGameLost(openedCell: Cell) {
-    if (openedCell.cellState === CellStates.MINE) {
-        isGameLost = true;
-        document.getElementById('game-state-msg')!.innerHTML = 'you lost;&nbsp;';
-        document.getElementById('game-state-msg')!.className = 'txt lose-msg';
-        document.getElementById('continue-btn')!.style.display = 'block';
-        document.getElementById('board-container')!.style.filter = 'blur(1px)';
-        document.getElementById('game-over-container')!.style.display = 'flex';
-        document.getElementById('game-over-container')!.style.boxShadow = '10px 10px 0 red, -10px -10px 0 red';
+    if (openedCell.cellState !== CellStates.MINE) {
+        return;
     }
+
+    shouldIncrementTime = false;
+    isGameLost = true;
+    document.getElementById('game-state-msg')!.innerHTML = 'you lost;&nbsp;';
+    document.getElementById('game-state-msg')!.className = 'txt lose-msg';
+    document.getElementById('continue-btn')!.style.display = 'block';
+    document.getElementById('board-container')!.style.filter = 'blur(1px)';
+    document.getElementById('game-over-container')!.style.display = 'flex';
+    document.getElementById('game-over-container')!.style.boxShadow = '10px 10px 0 red, -10px -10px 0 red';
 }
 
 function checkIfGameWon() {
-    let closedCellsCount = 0;
-    board.forEach(row => row.forEach(cell => closedCellsCount += !cell.isOpen ? 1 : 0));
+    let closedCellsCount = 0; 
+    board.forEach(row => row.filter(cell => closedCellsCount += !cell.isOpen ? 1 : 0)); 
+    if (closedCellsCount !== mineCount!) { 
+        return; 
+    }
 
-    if (closedCellsCount === mineCount!) {
-        isGameWon = true;
-        document.getElementById('game-state-msg')!.innerHTML = 'you won!';
-        document.getElementById('game-state-msg')!.className = 'txt win-msg';
-        document.getElementById('board-container')!.style.filter = 'blur(1px)';
-        document.getElementById('game-over-container')!.style.display = 'flex';
-        document.getElementById('game-over-container')!.style.boxShadow = '10px 10px 0 gold, -10px -10px 0 gold';
+    shouldIncrementTime = false;
+    isGameWon = true;
+    document.getElementById('game-state-msg')!.innerHTML = 'you won!';
+    document.getElementById('game-state-msg')!.className = 'txt win-msg';
+    document.getElementById('board-container')!.style.filter = 'blur(1px)';
+    document.getElementById('game-over-container')!.style.display = 'flex';
+    document.getElementById('game-over-container')!.style.boxShadow = '10px 10px 0 gold, -10px -10px 0 gold';
+
+    checkIfShouldSetHighScore();
+}
+
+function checkIfShouldSetHighScore() {
+    if (!isPlayingOnNativeDifficulty()) {
+        return;
+    }
+
+    const difficulty = difficultyStringToEnumKeyMap.get(
+        Array.from(difficultyToDimensionsMap.entries())
+            .filter(entry => entry[1].rows === rowCount && entry[1].columns === columnCount)[0][0]
+    );
+
+    if (difficulty !== undefined) {
+        const currentHighScore = getHighScore(difficulty);
+
+        if (Number.isNaN(currentHighScore) || timerVal < currentHighScore) {
+            setHighScore(difficulty, timerVal)
+        }
     }
 }
 
 function handleContinueGame() {
+    shouldIncrementTime = true;
+
     board = previousBoardState;
     drawBoard();
 
@@ -366,10 +452,53 @@ function setNewGameStyles() {
     document.getElementById('continue-btn')!.style.display = 'none';
     document.getElementById('game-over-container')!.style.display = 'none';
 
-    resetDifficultiesUnderlines();
-    document.getElementById(`${localStorage.getItem('difficulty')!}-btn`)!.classList.add("soft-underline");
 
     setSliderValues();
+    setFlagsLeft(mineCount!);
+
+    resetDifficultiesUnderlines();
+    handleDifficultyUnderline();
+}
+
+function isPlayingOnNativeDifficulty() {
+    return Array.from(difficultyToDimensionsMap).some(val => val[1].rows === rowCount! && val[1].columns === columnCount!);
+}
+
+function handleDifficultyUnderline() {
+    if (isPlayingOnNativeDifficulty()) {
+        document.getElementById(`${localStorage.getItem('difficulty')!}-btn`)!.classList.add("soft-underline");
+    }
+}
+
+function setFlagsLeft(newValue: number) {
+    document.getElementById('flags-left')!.innerHTML = newValue.toString();
+}
+
+function getFlagsLeft() {
+    return parseInt(document.getElementById('flags-left')!.innerHTML); 
+}
+
+function startTimer() {
+    shouldIncrementTime = true;
+    timerVal = 0;
+
+    timerId = setInterval(() => {
+        if (shouldIncrementTime) {
+            timerVal++;
+        }
+
+        setTimerVal(timerVal);
+    }, 1000);
+}
+
+function clearTimer() {
+    clearInterval(timerId);
+    shouldIncrementTime = false;
+}
+
+function setTimerVal(value: number) {
+    timerVal = value;
+    document.getElementById('timer')!.innerHTML = `${timerVal.toString()}s`;
 }
 
 function setSliderValues() {
@@ -455,6 +584,8 @@ function floodAndFill(r: number, c: number) {
 function handleFirstClick(clickedRow: number, clickedCol: number) {
     initBoardOnClick(clickedRow, clickedCol);
     isFirtClick = false;
+
+    startTimer();
 }
 
 function initEmptyBoard() {
@@ -655,4 +786,17 @@ function assignCellDefaultClassName(r: number, c: number, classNameToAssign: str
 
     DEFAULT_CELL_CLASSNAMES.forEach(className => elem.classList.remove(className));
     elem.classList.add(classNameToAssign);
+}
+
+function getHighScore(difficulty: Difficulties) {
+    const storedHighScore = localStorage.getItem(`${difficulty}-high-score`);
+    if (storedHighScore === null) {
+        return NaN;
+    }
+
+    return parseInt(storedHighScore);
+}
+
+function setHighScore(difficulty: Difficulties, score: number) {
+    localStorage.setItem(`${difficulty}-high-score`, score.toString())
 }

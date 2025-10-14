@@ -19,11 +19,46 @@
             </div>
         </div>
 
+        <div id="game-info-container" class="col-container">
+            <div class="row-container">
+                <div class="col-container" style="padding-right: 15px">
+                    <p class="board-bar-txt">flag count:</p>
+                    <p class="board-bar-txt">time:</p>
+                </div>
+                <div class="col-container">
+                    <p class="board-bar-txt" id="flags-left"></p>
+                    <p class="board-bar-txt" id="timer">0s</p>
+                </div>
+            </div>
+            <div class="line-break"></div>
+            <p id="high-scores-btn">view high scores</p>
+        </div>
+
         <div id="board-container"></div>
 
         <div id="game-over-container" class="row-container">
             <p id="game-state-msg"></p>
             <p id="continue-btn"> continue?</p>
+        </div>
+
+        <div id="high-scores-modal">
+            <p id="close-high-scores-btn">x</p>
+            <div class="col-container">
+                <p id="high-scores-title">high scores</p>
+                <div class="row-container">
+                    <div class="col-container high-scores-list" style="padding-right: 15px;">
+                        <p class="high-score-board-type-txt easy-txt">easy (9x9):</p>
+                        <p class="high-score-board-type-txt medium-txt">medium (16x16):</p>
+                        <p class="high-score-board-type-txt expert-txt">expert (30x16):</p>
+                    </div>
+                    <div class="col-container high-scores-list">
+                        <p id="easy-high-score" class="high-score-board-type-txt"></p>
+                        <p id="medium-high-score" class="high-score-board-type-txt"></p>
+                        <p id="expert-high-score" class="high-score-board-type-txt"></p>
+                    </div>
+                </div>
+        
+            </div>
         </div>
 
         <div id="bottom-bar">
