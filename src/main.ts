@@ -204,7 +204,7 @@ function checkIfShouldShowViableMoves() {
     if (!shouldShowViableMoves) {
         hideViableMoves();
     } else {
-        findViableMoves(board, rowCount!, columnCount!);
+        findViableMoves(board);
         hasShownHintForCurrentMove = true;
     }
 }
@@ -355,7 +355,7 @@ function handleContinueGame() {
     setNewGameStyles();
 
     if (shouldShowViableMoves) {
-        findViableMoves(board, rowCount!, columnCount!);
+        findViableMoves(board);
     }
 }
 

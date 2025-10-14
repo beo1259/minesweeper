@@ -2,22 +2,24 @@ import { PlayerKnownCell } from "./models/player-known-cell.js";
 import { Cell } from "./models/cell.js";
 import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME } from './constants.js';
 
-let _backendBoard: Cell[][] = []; // readonly, set at start of solve() - only access for setting the known board, and the style of a safe/mine cell
-let knownBoard: PlayerKnownCell[][] = [];
+/*
+ * This file contains the logic for solving a board's certain mine/safe cells.
+ * --- 
+ * Calling 'findViableMoves' on valid board state computes all of the guaranteed mine/safe cells for a given board state.
+ * The solving algorithm uses the 'PlayerKnownCell' model rather than the 'Cell' model that is used to create the board.
+ * ---
+ * 'PlayerKnownCell' is a representation of a cell that only contains information that is known by the player.
+ *  Therefore, all safe/mine cells found by the solver can be logically deduced by a player who only sees the board.
+*/
 
-let rowCount: number = 0;
-let columnCount: number = 0;
+let knownBoard: PlayerKnownCell[][] = [];
 
 let cachedSolvedMines: Set<string> = new Set();
 let cachedSolvedSafes: Set<string> = new Set();
 
-export function findViableMoves(board: Cell[][], rows: number, columns: number) {
-    _backendBoard = board;
-    knownBoard = getPlayerKnownBoard(_backendBoard);
-    rowCount = rows;
-    columnCount = columns;
-    resetClosedCellHighlights();
-    solve();
+export function findViableMoves(board: Cell[][]) {
+    knownBoard = getPlayerKnownBoard(board);
+    solveForCurrentMove();
 }
 
 // called by main.ts when a new game begins - cleans up the caches of known mines/safes
@@ -26,7 +28,7 @@ export function cleanupSolverCache() {
     cachedSolvedSafes = new Set();
 }
 
-function solve() {
+function solveForCurrentMove() {
     const frontierCells: PlayerKnownCell[] = []; // cells that: are closed, touched an open cell with value > 0
     const openNumberCells: PlayerKnownCell[] = []; // cells that: are open and have a value > 0
     setStartingCellKnowledge(frontierCells, openNumberCells);
@@ -278,34 +280,7 @@ function cacheImmediateMineCoords(frontierCellCoordKeys: Set<string>, openNumber
 }
 
 
-function resetClosedCellHighlights() {
-    knownBoard.forEach(row => {
-        row.forEach(cell => {
-            if (!cell.isOpen) {
-                const currentClassName = document.getElementById(`cell_${cell.r}_${cell.c}`)!.className; 
-                if (!currentClassName.includes('cell-flag') && !currentClassName.includes('cell-mine')) {
-                    document.getElementById(`cell_${cell.r}_${cell.c}`)!.className = 'cell cell-closed';
-                }
-            }
-        })
-    })
-}
-
-function highlightAsMine(r: number, c: number) {
-    document.getElementById(`cell_${r}_${c}`)!.classList.add(SOLVED_MINE_CLASSNAME);
-}
-
-function highlightAsSafe(r: number, c: number) {
-    const cell = _backendBoard[r][c];
-
-    if (cell.isOpen) {
-        return;
-    }
-
-    document.getElementById(`cell_${r}_${c}`)!.classList.add(SOLVED_SAFE_CLASSNAME);
-}
-
-export function getCoordKey(r: number, c: number) {
+function getCoordKey(r: number, c: number) {
     return `${r},${c}`;
 }
 
@@ -328,14 +303,17 @@ function getPlayerKnownNeighbours(r: number, c: number) {
         [1, -1], [1, 0], [1, 1],
     ];
 
+    const rowCount = knownBoard.length;
+    const columnCount = knownBoard[0].length;
+
     let neighbours: PlayerKnownCell[] = [];
     for (let dir of directions) {
         const targetRow = r + dir[0];
         const targetCol = c + dir[1];
 
         if (
-            targetRow < 0 || targetRow > rowCount! - 1
-            || targetCol < 0 || targetCol > columnCount! - 1
+            targetRow < 0 || targetRow > rowCount - 1
+            || targetCol < 0 || targetCol > columnCount - 1
         ) {
             continue;
         }
@@ -353,13 +331,9 @@ function getPlayerKnownBoard(board: Cell[][]) {
         knownBoard.push([])
         for (const cell of row) {
             const newRow = knownBoard[knownBoard.length - 1];
-            newRow.push(getPlayerKnownCellFromCell(cell));
+            newRow.push(new PlayerKnownCell(cell.r, cell.c, cell.isOpen ? cell.value : null));
         }
     }
 
     return knownBoard;
-}
-
-function getPlayerKnownCellFromCell(cell: Cell) {
-    return new PlayerKnownCell(cell.r, cell.c, cell.isOpen ? cell.value : null);
 }
