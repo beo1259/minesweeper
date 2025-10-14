@@ -24,6 +24,7 @@ html, body {
     align-self: center;
     width: 60%;
     padding-top: 40px;
+    padding-bottom: 20px;
     height: 20px;
     font-size: 24px;
     color: white;
@@ -321,13 +322,12 @@ input[type="range"] {
     align-self: center;
     border: 1px solid rgb(140, 140, 140);
     padding: 4px 10px;
+    width: 215px;
 }
 
-.line-break {
-    border: none;
-    border-top: 1px solid grey;
-    margin: 10px 0;
-    width: 100%;
+.vertical-line-break {
+    border-right: 1px solid grey;
+    margin: 0 10px;
 }
 
 .game-info-txt {
@@ -336,10 +336,12 @@ input[type="range"] {
     font-size: 18px;
 }
 
-#time-txt {
+#timer {
+    font-weight: bold;
 }
 
-#flags-remaining-txt {
+#flags-left {
+    font-weight: bold;
 }
 
 .slider-container {
