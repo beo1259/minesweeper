@@ -77,6 +77,8 @@ p {
     color: gold;
     position: absolute;
     top: 60px;
+    text-decoration: underline;
+    text-decoration-color: rgb(180, 180, 180);
 }
 
 #high-scores-btn {
