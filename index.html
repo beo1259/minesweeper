@@ -2,8 +2,12 @@
 <html>
     <body>
         <div id="top-bar">
-            <div class="col-container">
+            <div class="col-container" style="align-items: flex-end; gap: 5px;">
                 <p class="top-bar-item title">minesweeper</p>
+                <div id="game-info-container" class="row-container">
+                    <p id="flags-remaining-txt" class="game-info-txt">flags remaining: <span class="board-bar-txt" id="flags-left"></span>, &nbsp</p> 
+                    <p id="time-txt" class="game-info-txt">time: <span class="board-bar-txt" id="timer">0s</span></p>
+                </div>
             </div>
             <div class="col-container" style="align-items: center; gap: 10px">
                 <p id="space-btn">new game (space bar)</p>
@@ -12,26 +16,14 @@
                     <input type="checkbox" id="hint-checkbox">
                 </div>
             </div>
-            <div class="row-container top-bar-item difficulty-btns">
-                <p id="easy-btn" class="easy-txt difficulty-txt">easy</p>
-                <p id="medium-btn" class="medium-txt difficulty-txt">medium</p>
-                <p id="expert-btn" class="expert-txt difficulty-txt">expert</p>
-            </div>
-        </div>
-
-        <div id="game-info-container" class="col-container">
-            <div class="row-container">
-                <div class="col-container" style="padding-right: 15px">
-                    <p class="board-bar-txt">flag count:</p>
-                    <p class="board-bar-txt">time:</p>
+            <div class="col-container" style="align-items: center; gap: 5px;">
+                <div class="row-container top-bar-item difficulty-btns">
+                    <p id="easy-btn" class="easy-txt difficulty-txt">easy</p>
+                    <p id="medium-btn" class="medium-txt difficulty-txt">medium</p>
+                    <p id="expert-btn" class="expert-txt difficulty-txt">expert</p>
                 </div>
-                <div class="col-container">
-                    <p class="board-bar-txt" id="flags-left"></p>
-                    <p class="board-bar-txt" id="timer">0s</p>
-                </div>
+                <p id="high-scores-btn">view high scores</p>
             </div>
-            <div class="line-break"></div>
-            <p id="high-scores-btn">view high scores</p>
         </div>
 
         <div id="board-container"></div>

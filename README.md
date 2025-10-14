@@ -17,4 +17,3 @@ in separate terminal window:
 ## still being worked on
 
 - solver algorithm is not optimized and may take a while/crash the page on larger states (ie. midway through expert games)
-- on larger board sizes, the board sometimes covers the left side box (flag count, mines, high scores button)
