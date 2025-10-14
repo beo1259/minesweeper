@@ -1,16 +1,20 @@
 ## minesweeper
 
-currently missing timer & flag count. Solver is not complete and takes a while for the first move on larger states.
+the classic Minesweeper game. includes a solver to show viable moves for any given board state.
 
 ## running locally
 
 **from root repository directory...**
 
-in 1 terminal window (if you plan to make code changes):
+in 1 terminal window
 
-1. `npx tsc --watch`
+1. `npx tsc --watch` (compiles the ts files into js)
 
 in separate terminal window:
 
-2. `npx serve` - runs on port 3000 by default
+2. `npx serve` (runs on port 3000 by default, use the '-l' flag to use a different port. ie. `npx serve -l 8080`)
  
+## notes
+
+- currently missing timer & flag count
+- solver algorithm is not optimized and may take a while/crash the page on larger states (ie. midway through expert games)
