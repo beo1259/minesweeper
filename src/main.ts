@@ -401,18 +401,16 @@ function checkIfGameWon() {
 
     shouldIncrementTime = false;
     isGameWon = true;
-    document.getElementById('game-state-msg')!.innerHTML = 'you won!';
+    document.getElementById('game-state-msg')!.innerHTML = handleNewHighScore() ? `you won! new highscore ${timerVal} seconds!` : 'you won!';
     document.getElementById('game-state-msg')!.className = 'txt win-msg';
     document.getElementById('board-container')!.style.filter = 'blur(1px)';
     document.getElementById('game-over-container')!.style.display = 'flex';
     document.getElementById('game-over-container')!.style.boxShadow = '10px 10px 0 gold, -10px -10px 0 gold';
-
-    checkIfShouldSetHighScore();
 }
 
-function checkIfShouldSetHighScore() {
+function handleNewHighScore() {
     if (!isPlayingOnNativeDifficulty()) {
-        return;
+        return false;
     }
 
     const difficulty = difficultyStringToEnumKeyMap.get(
@@ -425,8 +423,11 @@ function checkIfShouldSetHighScore() {
 
         if (Number.isNaN(currentHighScore) || timerVal < currentHighScore) {
             setHighScore(difficulty, timerVal)
+            return true;
         }
     }
+    
+    return false;
 }
 
 function handleContinueGame() {

@@ -330,6 +330,14 @@ input[type="range"] {
     margin: 0 10px;
 }
 
+.flag-img {
+    width: 20px;
+    height: 20px;
+    vertical-align: middle; 
+    margin-bottom: 2px;
+    margin-right: 4px;
+}
+
 .game-info-txt {
     margin: 0;
     padding: 0;
