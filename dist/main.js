@@ -37,7 +37,7 @@ const difficultyToDimensionsMap = new Map([
     [Difficulties.EXPERT, new BoardDimensions(30, 16)],
 ]);
 const mineCountMap = new Map([
-    [Difficulties.EASY, 5],
+    [Difficulties.EASY, 10],
     [Difficulties.MEDIUM, 40],
     [Difficulties.EXPERT, 99],
 ]);
@@ -193,7 +193,6 @@ function resetDifficultiesUnderlines() {
     });
 }
 function startGame() {
-    //localStorage.setItem('easy-high-score', '10');
     clearTimer();
     setTimerVal(0);
     isGameLost = false;

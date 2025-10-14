@@ -48,7 +48,7 @@ const difficultyToDimensionsMap: Map<string, BoardDimensions> = new Map([
 ]);
 
 const mineCountMap: Map<string, number> = new Map([
-    [Difficulties.EASY, 5],
+    [Difficulties.EASY, 10],
     [Difficulties.MEDIUM, 40],
     [Difficulties.EXPERT, 99],
 ]);
@@ -240,8 +240,6 @@ function resetDifficultiesUnderlines() {
 }
 
 function startGame() {
-    //localStorage.setItem('easy-high-score', '10');
-
     clearTimer();
     setTimerVal(0);
 
