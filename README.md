@@ -14,6 +14,7 @@ in separate terminal window:
 
 2. `npx serve` (runs on port 3000 by default, use the '-l' flag to use a different port. ie. `npx serve -l 8080`)
  
-## notes
+## still being worked on
 
 - solver algorithm is not optimized and may take a while/crash the page on larger states (ie. midway through expert games)
+- on larger displays with larger board sizes, the board sometimes covers the left side box (flag count, mines, high scores button)
