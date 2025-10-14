@@ -205,7 +205,7 @@ function xrayNeighbours(r, c) {
     }
     const closedNeighbours = getNeighbours(r, c).filter(n => !n.isOpen && !n.isFlagged);
     for (const n of closedNeighbours) {
-        getHtmlElementByCoords(n.r, n.c).className = `cell cell-0`;
+        assignCellDefaultClassName(n.r, n.c, 'cell-0');
     }
     currentlyXrayedCell = [r, c];
 }
@@ -217,7 +217,7 @@ function hidePreviouslyXrayedNeigbours() {
     const currentC = currentlyXrayedCell[1];
     const closedNeighbours = getNeighbours(currentR, currentC).filter(n => !n.isOpen && !n.isFlagged);
     for (const n of closedNeighbours) {
-        getHtmlElementByCoords(n.r, n.c).className = `cell ${CELL_CLOSED_CLASSNAME}`;
+        assignCellDefaultClassName(n.r, n.c, 'cell-closed');
     }
 }
 function handleCellMainClick(r, c) {
@@ -526,16 +526,21 @@ function getCellClassName(cell) {
         }
     }
 }
-// TODO - check if class has a default cell name (defined them above) and if so just remove it rather than setting it entirely fresh (so i can no remove the cell visibility);
 function updateCell(updatedCell) {
-    const elem = getHtmlElementByCoords(updatedCell.r, updatedCell.c);
     if (updatedCell.isFlagged) {
         updatedCell.isOpen = false;
     }
     else if (updatedCell.isOpen) {
         updatedCell.isFlagged = false;
-        SOLVED_CELL_CLASSNAMES.forEach(className => elem.classList.remove(className));
+        SOLVED_CELL_CLASSNAMES.forEach(className => getHtmlElementByCoords(updatedCell.r, updatedCell.c).classList.remove(className));
     }
+    assignCellDefaultClassName(updatedCell.r, updatedCell.c, getCellClassName(updatedCell));
+}
+function assignCellDefaultClassName(r, c, classNameToAssign) {
+    if (!DEFAULT_CELL_CLASSNAMES.includes(classNameToAssign)) {
+        throw new Error("Invalid cell classname");
+    }
+    const elem = getHtmlElementByCoords(r, c);
     DEFAULT_CELL_CLASSNAMES.forEach(className => elem.classList.remove(className));
-    elem.classList.add(getCellClassName(updatedCell));
+    elem.classList.add(classNameToAssign);
 }
