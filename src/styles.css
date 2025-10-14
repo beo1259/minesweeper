@@ -72,6 +72,13 @@ p {
     text-decoration-color: white;
 }
 
+#high-scores-title {
+    font-size: 30px;
+    color: gold;
+    position: absolute;
+    top: 60px;
+}
+
 #high-scores-btn {
     color: rgb(230, 230, 230);
     font-size: 18px;
@@ -87,8 +94,10 @@ p {
     display: none;
     position: absolute;
     z-index: 998;
-    height: 45%;
-    width: 25%;
+    min-height: 300px;
+    max-height: 300px;
+    min-width: 400px;
+    max-width: 400px;
     justify-content: center;
     align-items: center;
     padding: 20px;
@@ -108,14 +117,8 @@ p {
     font-family: Arial;
 }
 
-#high-scores-title {
-    font-size: 30px;
-    color: gold;
-    position: absolute;
-    top: 50px;
-}
-
 .high-scores-list {
+    padding-top: 25px;
     gap: 10px;
     justify-content: center;
 }
