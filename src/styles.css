@@ -340,9 +340,11 @@ input[type="range"] {
 
 .cell-solved-mine {
     border: 3px solid red;
+    /* transition: border 0.2s ease-in-out; */
 }
 
 .cell-solved-safe {
     border: 3px solid rgb(0, 230, 0);
-;
+    /* transition: border 0.2s ease-in-out; */
 }
+

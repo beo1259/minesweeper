@@ -1,8 +1,8 @@
 import { Cell } from "./models/cell.js";
 import { CellStates } from "./models/cell-states.js";
 import { BoardDimensions } from "./models/board-dimensions.js";
-import { analyzeBoard, getCoordKey, cleanupSolverCache } from "./solver.js";
-import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES } from './constants.js';
+import { cleanupSolverCache, findViableMoves } from "./solver.js";
+import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, SAMPLE_BOARD } from './constants.js';
 
 let board: Cell[][] = [];
 let previousBoardState: Cell[][] = [];
@@ -124,8 +124,6 @@ document.addEventListener('mousedown', (e) => {
 })
 
 function processCellMainClick(r: number, c: number) {
-    const cell = board[r][c];
-
     handleCellMainClick(r, c);
     checkIfShouldShowViableMoves();
 }
@@ -207,7 +205,7 @@ function checkIfShouldShowViableMoves() {
     if (!shouldShowViableMoves) {
         hideViableMoves();
     } else {
-        analyzeBoard(board, rowCount!, columnCount!);
+        findViableMoves(board, rowCount!, columnCount!);
         hasShownHintForCurrentMove = true;
     }
 }
@@ -269,7 +267,7 @@ function hidePreviouslyXrayedNeigbours() {
 
     const closedNeighbours = getNeighbours(currentR, currentC).filter(n => !n.isOpen && !n.isFlagged);
     for (const n of closedNeighbours) {
-        getHtmlElementByCoords(n.r, n.c)!.className = 'cell cell-closed';
+        getHtmlElementByCoords(n.r, n.c)!.className = `cell ${CELL_CLOSED_CLASSNAME}`;
     }
 }
 
@@ -359,7 +357,7 @@ function handleContinueGame() {
     setNewGameStyles();
 
     if (shouldShowViableMoves) {
-        analyzeBoard(board, rowCount!, columnCount!);
+        findViableMoves(board, rowCount!, columnCount!);
     }
 }
 
@@ -391,7 +389,7 @@ function showMineLocations() {
     board.forEach(row => {
         for (const cell of row) {
             if (cell.cellState === CellStates.MINE) {
-                getHtmlElementByCoords(cell.r, cell.c)!.className = 'cell cell-mine';
+                getHtmlElementByCoords(cell.r, cell.c)!.className = `cell ${CELL_MINE_CLASSNAME}`;
             }
         }
     })
@@ -475,6 +473,10 @@ function initEmptyBoard() {
 }
 
 function initBoardOnClick(firstClickRow: number, firstClickCol: number): void {
+    // board = JSON.parse(SAMPLE_BOARD);
+    // drawBoard();
+    // return;
+
     const safeSquaresOnInit = [[firstClickRow, firstClickCol], ...getNeighbours(firstClickRow, firstClickCol).map(cell => [cell.r, cell.c])];
     const mineCoords = generateMineCoordinatesOnInit(safeSquaresOnInit);
 
@@ -604,31 +606,31 @@ function getHtmlElementByCoords(r: number, c: number) {
 
 function getCellClassName(cell: Cell): string {
     if (cell.isFlagged) {
-        return 'cell-flag';
+        return CELL_FLAG_CLASSNAME;
     } else if (!cell.isOpen) {
-        return 'cell-closed';
+        return CELL_CLOSED_CLASSNAME;
     } else if (cell.cellState === CellStates.MINE) {
-        return cell.isOpen ? 'cell-mine-red' : 'cell-mine';
+        return cell.isOpen ? CELL_MINE_RED_CLASSNAME : CELL_MINE_CLASSNAME;
     } else {
         switch (cell.value) {
             case 0:
-                return 'cell-0';
+                return CELL_0_CLASSNAME;
             case 1:
-                return 'cell-1';
+                return CELL_1_CLASSNAME;
             case 2:
-                return 'cell-2';
+                return CELL_2_CLASSNAME;
             case 3:
-                return 'cell-3';
+                return CELL_3_CLASSNAME;
             case 4:
-                return 'cell-4';
+                return CELL_4_CLASSNAME;
             case 5:
-                return 'cell-5';
+                return CELL_5_CLASSNAME;
             case 6:
-                return 'cell-6';
+                return CELL_6_CLASSNAME;
             case 7:
-                return 'cell-7';
+                return CELL_7_CLASSNAME; 
             case 8:
-                return 'cell-8';
+                return CELL_8_CLASSNAME;
             default:
                 throw new Error("Cell is invalid");
         }

@@ -9,8 +9,9 @@ let rowCount: number = 0;
 let columnCount: number = 0;
 
 let cachedSolvedMines: Set<string> = new Set();
+let cachedSolvedSafes: Set<string> = new Set();
 
-export function analyzeBoard(board: Cell[][], rows: number, columns: number) {
+export function findViableMoves(board: Cell[][], rows: number, columns: number) {
     _backendBoard = board;
     knownBoard = getPlayerKnownBoard(_backendBoard);
     rowCount = rows;
@@ -19,94 +20,97 @@ export function analyzeBoard(board: Cell[][], rows: number, columns: number) {
     solve();
 }
 
+// called by main.ts when a new game begins - cleans up the caches of known mines/safes
 export function cleanupSolverCache() {
     cachedSolvedMines = new Set();
+    cachedSolvedSafes = new Set();
 }
 
 function solve() {
-    const frontier: PlayerKnownCell[] = []; // cells that: are closed, touched an open cell with value > 0
+    const frontierCells: PlayerKnownCell[] = []; // cells that: are closed, touched an open cell with value > 0
     const openNumberCells: PlayerKnownCell[] = []; // cells that: are open and have a value > 0
-    setStartingKnowledge(frontier, openNumberCells);
+    setStartingCellKnowledge(frontierCells, openNumberCells);
 
-    const frontierCellCoordKeys: Set<string> = new Set(frontier.map(c => getCoordKey(c.r, c.c)));
+    const frontierCellCoordKeys: Set<string> = new Set(frontierCells.map(c => getCoordKey(c.r, c.c)));
     const openNumberCellCoordKeys: Set<string> = new Set(openNumberCells.map(c => getCoordKey(c.r, c.c)));
+
+    const unusedFrontierCells: Set<string> = new Set(Array.from(frontierCellCoordKeys).filter(f => !cachedSolvedMines.has(f) && !cachedSolvedSafes.has(f)));
 
     const curState: Map<string, boolean> = getDefaultState(frontierCellCoordKeys, openNumberCells); // true = mine, false = safe
     const validStates: Map<string, boolean>[] = [];
     const stateStatusMap: Map<string, 'unknown'|'dead'|'solved'> = new Map();
-    const stateDomains: Map<string, Set<string>> = new Map();
 
-    function backtrack(curState: Map<string, boolean>) {
-        const curStateStringKey = getMapAsStringKey(curState);
-        const curStateStatus = stateStatusMap.get(curStateStringKey);
-
-        if (curStateStatus === 'solved') return true
-        else if (curStateStatus === 'dead') return false
-        else if (curStateStatus === undefined) {
-            stateStatusMap.set(curStateStringKey, 'unknown');
-        } 
-
-        // base case: we've found a valid state
-        if (areAllNumberedCellsSatisfied(curState, openNumberCellCoordKeys)) {
-            stateStatusMap.set(curStateStringKey, 'solved')
-            validStates.push(curState);
-            return true;
-        }
-
-        const nextPossibleStates = getNextPossibleValidStates(curState, frontierCellCoordKeys, stateStatusMap);
-        // if no next possible states, we don't want to keep exploring this state in susquent recurses
-        if (nextPossibleStates.length === 0) { 
-            stateStatusMap.set(curStateStringKey, 'dead');
-            return false;
-        }
-
-        let anySolved = false;
-        for (const state of nextPossibleStates) {
-            const possibleStateStringKey = getMapAsStringKey(state);
-            const possibleStateStatus = stateStatusMap.get(possibleStateStringKey);
-
-            // make sure we don't revisit already solved states
-            if (possibleStateStatus === 'dead' || possibleStateStatus === 'solved') {
-                continue;
-            }
-
-            if(backtrack(state)) {
-                anySolved = true;
-            }
-        }
-
-        // if any child states were solved from our current state, we mark this parent as solved
-        if (anySolved) {
-            stateStatusMap.set(curStateStringKey, 'solved');
-            return true;
-        } else {
-            stateStatusMap.set(curStateStringKey, 'dead');
-            return false;
-        }
-    }
-
-    backtrack(curState);
+    r_backtrack(curState, stateStatusMap, openNumberCellCoordKeys, validStates, unusedFrontierCells);
     handleMineOdds(validStates);
 }
 
-function getNextPossibleValidStates(curState: Map<string, boolean>, frontierCellCoordKeys: Set<string>, stateStatusMap: Map<string, 'unknown'|'dead'|'solved'>) {
-    const curStateStatus = stateStatusMap.get(getMapAsStringKey(curState));
-    if (curStateStatus  !== undefined && (curStateStatus === 'dead' || curStateStatus === 'solved')) {
-        return [];
+function r_backtrack(
+    curState: Map<string, boolean>, // the state whose possibility branches will be traversed
+    stateStatusMap: Map<string, 'unknown'|'dead'|'solved'>, // the status of each state that has been seen
+    openNumberCellCoordKeys: Set<string>, // the coordinate key ('x,y') of each open numbered cell (> 0)
+    validStates: Map<string, boolean>[], // all of the valid states that we've found (ie. states where all of the open numbered cells values' are satisfied) - always the leaves 
+    unusedFrontierCells: Set<string>, // all of the frontier cells that we have determined to be 100% safe or 100% mine
+) {
+    const curStateStringKey = getMapAsStringKey(curState);
+    const curStateStatus = stateStatusMap.get(curStateStringKey);
+
+    if (curStateStatus === 'solved') return true;
+    else if (curStateStatus === 'dead') return false;
+    else if (curStateStatus === undefined) {
+        stateStatusMap.set(curStateStringKey, 'unknown');
     }
 
+    // base case: we've found a valid state
+    if (areAllNumberedCellsSatisfied(curState, openNumberCellCoordKeys)) {
+        stateStatusMap.set(curStateStringKey, 'solved')
+        validStates.push(curState);
+        return true;
+    }
+
+    const nextPossibleStates = getNextPossibleValidStates(curState, unusedFrontierCells);
+    // if no next possible states, we don't want to keep exploring this state in susquent recurses
+    if (nextPossibleStates.length === 0) { 
+        stateStatusMap.set(curStateStringKey, 'dead');
+        return false;
+    }
+
+    let anySolved = false;
+    for (const state of nextPossibleStates) {
+        const possibleStateStringKey = getMapAsStringKey(state);
+        const possibleStateStatus = stateStatusMap.get(possibleStateStringKey);
+
+        // make sure we don't revisit already solved states
+        if (possibleStateStatus === 'dead' || possibleStateStatus === 'solved') {
+            continue;
+        }
+
+        if(r_backtrack(state, stateStatusMap, openNumberCellCoordKeys, validStates, unusedFrontierCells)) {
+            anySolved = true;
+        }
+    }
+
+    // if any child states were solved from our current state, we mark this parent as solved
+    if (anySolved) {
+        stateStatusMap.set(curStateStringKey, 'solved');
+        return true;
+    } else {
+        stateStatusMap.set(curStateStringKey, 'dead');
+        return false;
+    }
+}
+
+function getNextPossibleValidStates(curState: Map<string, boolean>, unusedFrontierCells: Set<string>) {
     const nextPossibleStates: Map<string, boolean>[] = [];
 
-    for (const coordKey of frontierCellCoordKeys) {
+    for (const coordKey of unusedFrontierCells) {
         if (curState.get(coordKey) === true) {
             continue;
         }
 
-        const coordTuple = getCoordTupleFromKey(coordKey);
-        const r = coordTuple[0];
-        const c = coordTuple[1];
-
         const curStateDeepCopy: Map<string, boolean> = new Map(curState);
+
+        const [r, c] = getCoordTupleFromKey(coordKey);
+
         if (isSafeToPlaceMineAtCell(r, c, curState)) {
             curStateDeepCopy.set(coordKey, true);
             nextPossibleStates.push(curStateDeepCopy);
@@ -145,31 +149,50 @@ function handleMineOdds(validStates: Map<string, boolean>[]) {
         validSafeStatesCoordsOnly.push(safeCoords);
     }
 
-    const mineProbabilities = getCellProbabilities(validMineStatesCoordsOnly, 1);
+    const mineProbabilities = getCellProbabilities(validMineStatesCoordsOnly);
+    const safeProbabilities = getCellProbabilities(validSafeStatesCoordsOnly);
+    const minesToHighlight: [number, number][] = [];
+    const safesToHighlight: [number, number][] = [];
 
     for (const [coordKey, mineProbability] of mineProbabilities.entries()) {
         if (mineProbability === 1) {
-            const coordTuple = getCoordTupleFromKey(coordKey);
-            highlightAsMine(coordTuple[0], coordTuple[1]);
+            const [r, c] = getCoordTupleFromKey(coordKey);
             cachedSolvedMines.add(coordKey);
+            minesToHighlight.push([r, c])
         }
     }
-
-    const safeProbabilities = getCellProbabilities(validSafeStatesCoordsOnly, 0);
 
     for (const [coordKey, safeProbability] of safeProbabilities.entries()) {
         if (safeProbability === 1) {
-            const coordTuple = getCoordTupleFromKey(coordKey);
-            highlightAsSafe(coordTuple[0], coordTuple[1]);
+            const [r, c] = getCoordTupleFromKey(coordKey);
+            cachedSolvedSafes.add(coordKey);
+            safesToHighlight.push([r, c])
         }
     }
+
+    applyStyles(minesToHighlight, safesToHighlight)
+}
+
+function applyStyles(minesToHighlight: [number, number][], safesToHighlight: [number, number][]) {
+    requestAnimationFrame(() => {
+        for (const [r, c] of minesToHighlight) { 
+            const el = cellEl(r, c);
+            el.classList.add(SOLVED_MINE_CLASSNAME) 
+        };
+        for (const [r, c] of safesToHighlight) { 
+            const el = cellEl(r, c);
+            el.classList.add(SOLVED_SAFE_CLASSNAME) 
+        };
+    });
+} 
+
+function cellEl(r: number, c: number) {
+    return document.getElementById(`cell_${r}_${c}`)!;
 }
 
 function areAllNumberedCellsSatisfied(assignedMineCoordKeys: Map<string, boolean>, openNumberCellCoordKeys: Set<string>) {
     for (const numberCellKey of openNumberCellCoordKeys) {
-        const coordTuple = getCoordTupleFromKey(numberCellKey);
-        const r = coordTuple[0];
-        const c = coordTuple[1];
+        const [r, c] = getCoordTupleFromKey(numberCellKey);
 
         const assignedAround = getPlayerKnownNeighbours(r, c)
             .map(n => getCoordKey(n.r, n.c))
@@ -201,7 +224,7 @@ function isSafeToPlaceMineAtCell(r: number, c: number, assignedMineCoordKeys: Ma
     return true;
 }
 
-function getCellProbabilities(validAssignments: Set<string>[], mineOrSafe: 1 | 0) {
+function getCellProbabilities(validAssignments: Set<string>[]) {
     const numberOfAppearancesByCoordKey: Map<string, number> = new Map();
     for (const config of validAssignments) {
         config.forEach(coordKey => {
@@ -221,7 +244,7 @@ function getCellProbabilities(validAssignments: Set<string>[], mineOrSafe: 1 | 0
     return cellProbabilityByKey;
 }
 
-function setStartingKnowledge(frontierArr: PlayerKnownCell[], openNumberCellsArr: PlayerKnownCell[]) {
+function setStartingCellKnowledge(frontierArr: PlayerKnownCell[], openNumberCellsArr: PlayerKnownCell[]) {
     if (frontierArr.length !== 0 || openNumberCellsArr.length !== 0) {
         throw new Error("frontierArr & openNumberCellsArr should be empty")
     }
@@ -247,11 +270,13 @@ function cacheImmediateMineCoords(frontierCellCoordKeys: Set<string>, openNumber
         const frontierNeighbours = getPlayerKnownNeighbours(cell.r, cell.c)
             .filter(n => frontierCellCoordKeys.has(getCoordKey(n.r, n.c)));
 
+        // intial prune conditions
         if (frontierNeighbours.length === cell.knownValue) {
             frontierNeighbours.forEach(n => cachedSolvedMines.add(getCoordKey(n.r, n.c)))
         }
     }
 }
+
 
 function resetClosedCellHighlights() {
     knownBoard.forEach(row => {
@@ -286,11 +311,6 @@ export function getCoordKey(r: number, c: number) {
 
 function getCoordTupleFromKey(coordKey: string) {
     return coordKey.split(',').map(coord => parseInt(coord));
-}
-
-function getPlayerKnowCellFromCoordKey(coordKey: string) {
-    const coords = getCoordTupleFromKey(coordKey);
-    return knownBoard[coords[0], coords[1]];
 }
 
 function isPlayerKnowCellFrontierCell(cell: PlayerKnownCell, neighbours: PlayerKnownCell[]) {
