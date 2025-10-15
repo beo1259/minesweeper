@@ -14,7 +14,6 @@ let rowCount;
 let mineCount;
 let curHoveredCellDataset = null;
 let currentlyXrayedCell = [];
-let hasShownHintForCurrentMove = true;
 let shouldShowViableMoves = false;
 let shouldIncrementTime = false;
 let timerVal = 0;
@@ -41,7 +40,10 @@ const mineCountMap = new Map([
     [Difficulties.MEDIUM, 40],
     [Difficulties.EXPERT, 99],
 ]);
-window.onload = () => handleNewGame(getStoredDifficulty() ?? 'medium', false);
+window.onload = () => {
+    drawTitle();
+    handleNewGame(getStoredDifficulty() ?? 'medium', false);
+};
 document.addEventListener('click', (event) => {
     if (!isShowingHighScores) {
         return;
@@ -215,16 +217,16 @@ function startGame() {
     initEmptyBoard();
     setNewGameStyles();
     cleanupSolverCache();
+    if (shouldShowViableMoves) {
+        findViableMoves(board);
+    }
 }
 function checkIfShouldShowViableMoves() {
-    if (!areAnyCellsOpen())
-        return;
     if (!shouldShowViableMoves) {
         hideViableMoves();
     }
     else {
         findViableMoves(board);
-        hasShownHintForCurrentMove = true;
     }
 }
 function hideViableMoves() {
@@ -234,20 +236,6 @@ function hideViableMoves() {
             elem?.classList.remove(SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME);
         }
     }
-}
-function areAnyCellsOpen() {
-    let atLeastOneCellOpen = false;
-    for (const row of board) {
-        for (const cell of row) {
-            if (cell.isOpen) {
-                atLeastOneCellOpen = true;
-                break;
-            }
-        }
-        if (atLeastOneCellOpen)
-            break;
-    }
-    return atLeastOneCellOpen;
 }
 function handleOpenCellMainClick(r, c) {
     const cell = board[r][c];
@@ -284,7 +272,6 @@ function handleCellMainClick(r, c) {
     if (cell.isFlagged) {
         return;
     }
-    hasShownHintForCurrentMove = false;
     if (isFirtClick) {
         handleFirstClick(r, c);
     }
@@ -380,6 +367,7 @@ function setNewGameStyles() {
     setFlagsLeft(mineCount);
     resetDifficultiesUnderlines();
     handleDifficultyUnderline();
+    drawTitle();
 }
 function handleDifficultyUnderline() {
     const difficulty = getNativeDifficultyByDimensions();
@@ -675,4 +663,33 @@ function getHighScore(difficulty) {
 }
 function setHighScore(difficulty, score) {
     localStorage.setItem(`${difficulty}-high-score`, score.toString());
+}
+function drawTitle() {
+    const el = document.getElementById('title');
+    const title = ['m', 'i', 'n', 'e', 's', 'w', 'e', 'e', 'p', 'e', 'r'];
+    const spanElements = [];
+    const colors = [
+        '144, 197, 250',
+        '125, 192, 112',
+        '238, 127, 138',
+        '224, 141, 248',
+        '213, 172, 67',
+        '128, 202, 203',
+        '153, 153, 153',
+        '209, 216, 223',
+    ];
+    const colorsToPopFrom = structuredClone(colors);
+    for (const char of title) {
+        let randColor = '';
+        if (colorsToPopFrom.length > 0) {
+            const randIndex = Math.floor(Math.random() * colorsToPopFrom.length);
+            randColor = colorsToPopFrom.splice(randIndex, 1)[0];
+        }
+        else {
+            const randIndex = Math.floor(Math.random() * colors.length);
+            randColor = colors[randIndex];
+        }
+        spanElements.push(`<span class="title-char" style="color: rgb(${randColor});">${char}</span>`);
+    }
+    el.innerHTML = spanElements.join('');
 }

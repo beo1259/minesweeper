@@ -19,7 +19,12 @@ let cachedSolvedSafes: Set<string> = new Set();
 
 export function findViableMoves(board: Cell[][]) {
     knownBoard = getPlayerKnownBoard(board);
-    solveForCurrentMove();
+
+    if (areAnyCellsOpen(knownBoard)) {
+        solveForCurrentMove();
+    } else {
+        highlightAllAsSafe();
+    }
 }
 
 // called by main.ts when a new game begins - cleans up the caches of known mines/safes
@@ -173,6 +178,17 @@ function handleMineOdds(validStates: Map<string, boolean>[]) {
     }
 
     applyStyles(minesToHighlight, safesToHighlight)
+}
+
+function highlightAllAsSafe() {
+    requestAnimationFrame(() => {
+        for (const row of knownBoard) {
+            for (const cell of row) {
+                const el = cellEl(cell.r, cell.c);
+                el.classList.add(SOLVED_SAFE_CLASSNAME);
+            }
+        }
+    });
 }
 
 function applyStyles(minesToHighlight: [number, number][], safesToHighlight: [number, number][]) {
@@ -337,3 +353,19 @@ function getPlayerKnownBoard(board: Cell[][]) {
 
     return knownBoard;
 }
+
+function areAnyCellsOpen(board: PlayerKnownCell[][]) {
+    let atLeastOneCellOpen = false;
+    for (const row of board) {
+        for (const cell of row) {
+            if (cell.isOpen)  {
+                atLeastOneCellOpen = true;
+                break;
+            }
+        }
+        if (atLeastOneCellOpen) break;
+    }
+
+    return atLeastOneCellOpen;
+}
+

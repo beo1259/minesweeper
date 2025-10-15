@@ -20,7 +20,6 @@ let curHoveredCellDataset: DOMStringMap | null = null;
 
 let currentlyXrayedCell: number[] = [];
 
-let hasShownHintForCurrentMove: boolean = true;
 let shouldShowViableMoves: boolean = false;
 
 let shouldIncrementTime: boolean = false;
@@ -53,7 +52,10 @@ const mineCountMap: Map<string, number> = new Map([
     [Difficulties.EXPERT, 99],
 ]);
 
-window.onload = () => handleNewGame(getStoredDifficulty() ?? 'medium', false);
+window.onload = () => { 
+    drawTitle();
+    handleNewGame(getStoredDifficulty() ?? 'medium', false) 
+};
 
 document.addEventListener('click', (event) => {
     if (!isShowingHighScores) {
@@ -272,16 +274,17 @@ function startGame() {
     initEmptyBoard();
     setNewGameStyles();
     cleanupSolverCache();
+
+    if(shouldShowViableMoves) {
+        findViableMoves(board);
+    }
 }
 
 function checkIfShouldShowViableMoves() {
-    if (!areAnyCellsOpen()) return;
-
     if (!shouldShowViableMoves) {
         hideViableMoves();
     } else {
         findViableMoves(board);
-        hasShownHintForCurrentMove = true;
     }
 }
 
@@ -292,21 +295,6 @@ function hideViableMoves() {
             elem?.classList.remove(SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME);
         }
     }
-}
-
-function areAnyCellsOpen() {
-    let atLeastOneCellOpen = false;
-    for (const row of board) {
-        for (const cell of row) {
-            if (cell.isOpen)  {
-                atLeastOneCellOpen = true;
-                break;
-            }
-        }
-        if (atLeastOneCellOpen) break;
-    }
-
-    return atLeastOneCellOpen;
 }
 
 function handleOpenCellMainClick(r: number, c: number) {
@@ -354,8 +342,6 @@ function handleCellMainClick(r: number, c: number): void {
     if (cell.isFlagged) {
         return;
     }
-
-    hasShownHintForCurrentMove = false;
 
     if (isFirtClick) {
         handleFirstClick(r, c);
@@ -473,6 +459,8 @@ function setNewGameStyles() {
 
     resetDifficultiesUnderlines();
     handleDifficultyUnderline();
+
+    drawTitle();
 }
 
 function handleDifficultyUnderline() {
@@ -535,6 +523,7 @@ function setSliderValues() {
     document.getElementById('cols-slider-value')!.innerHTML = columnCount!.toString();
     document.getElementById('rows-slider-value')!.innerHTML = rowCount!.toString();
     document.getElementById('mines-slider-value')!.innerHTML = mineCount!.toString();
+
     colsSlider.value = columnCount!.toString();
     rowsSlider.value = rowCount!.toString();
     minesSlider.value = mineCount!.toString();
@@ -831,4 +820,40 @@ function getHighScore(difficulty: Difficulties) {
 
 function setHighScore(difficulty: Difficulties, score: number) {
     localStorage.setItem(`${difficulty}-high-score`, score.toString())
+}
+
+function drawTitle() {
+    const el = document.getElementById('title')!;
+
+    const title = ['m','i','n','e','s','w','e','e','p','e','r'];
+    const spanElements = [];
+
+    const colors = [
+        '144, 197, 250', 
+        '125, 192, 112', 
+        '238, 127, 138',
+        '224, 141, 248',
+        '213, 172, 67',
+        '128, 202, 203',
+        '153, 153, 153',
+        '209, 216, 223',
+    ];
+
+    const colorsToPopFrom = structuredClone(colors);
+
+    for (const char of title) {
+
+        let randColor = '' 
+        if (colorsToPopFrom.length > 0) {
+            const randIndex = Math.floor(Math.random() * colorsToPopFrom.length)
+            randColor = colorsToPopFrom.splice(randIndex, 1)[0];
+        } else {
+            const randIndex = Math.floor(Math.random() * colors.length)
+            randColor = colors[randIndex];
+        }
+
+        spanElements.push(`<span class="title-char" style="color: rgb(${randColor});">${char}</span>`)
+    }
+
+    el.innerHTML = spanElements.join('');
 }
