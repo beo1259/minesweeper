@@ -81,7 +81,7 @@ document.getElementById('easy-btn')!.addEventListener('click', () => handleNewGa
 document.getElementById('medium-btn')!.addEventListener('click', () => handleNewGame('medium', true));
 document.getElementById('expert-btn')!.addEventListener('click', () => handleNewGame('expert', true));
 
-document.getElementById('space-btn')!.addEventListener('click', () => startGame());
+document.getElementById('new-game-btn')!.addEventListener('click', () => startGame());
 
 document.getElementById('high-scores-btn')!.addEventListener('click', () => showOrHideHighScores(true));
 document.getElementById('close-high-scores-btn')!.addEventListener('click', () => showOrHideHighScores(false));
@@ -106,14 +106,18 @@ colsSlider.oninput = () => {
 const rowsSlider = document.getElementById('rows-slider') as HTMLInputElement;
 rowsSlider.oninput = () => {
     document.getElementById('rows-slider-value')!.innerHTML = rowsSlider.value;
+
     rowCount = parseInt(rowsSlider.value); 
+
     handleNewGame(getStoredDifficulty()!, false)
     minesSlider.max = getMaxMineCount().toString();
 };
 const minesSlider = document.getElementById('mines-slider') as HTMLInputElement;
 minesSlider.oninput = () => {
     document.getElementById('mines-slider-value')!.innerHTML = minesSlider.value;
+
     mineCount = parseInt(minesSlider.value); 
+
     handleNewGame(getStoredDifficulty()!, false)
 };
 
@@ -165,13 +169,12 @@ function showOrHideHighScores(shouldShow: boolean) {
     setStylesOnHighScoresModelAction(shouldShow);
 }
 
-function setStylesOnHighScoresModelAction(shouldShow: boolean) {
+function setStylesOnHighScoresModelAction(isShowing: boolean) {
     const modal = document.getElementById('high-scores-modal')!;
-    modal.style.display = shouldShow ? 'block' : 'none';
-    modal.style.opacity = shouldShow ? '1' : '0';
-    modal.style.pointerEvents = shouldShow ? 'auto' : 'none';
+    modal.style.display = isShowing ? 'block' : 'none';
+    modal.style.pointerEvents = isShowing ? 'auto' : 'none';
 
-    if (shouldShow) {
+    if (isShowing) {
         for (const difficulty of Object.values(Difficulties)) {
             const highScore = getHighScore(difficulty);
             document.getElementById(`${difficulty}-high-score`)!.innerHTML = Number.isNaN(highScore) ? 'never completed' : `${highScore} seconds`
@@ -180,18 +183,16 @@ function setStylesOnHighScoresModelAction(shouldShow: boolean) {
 
     const allElements = document.getElementsByTagName('*');
     for (const el of allElements) {
-        if (el === modal || modal.contains(el) || el.tagName === 'BODY' || el.tagName === 'HTML') {
+        if (el === modal || modal.contains(el) || (el as HTMLElement).contains(modal) || el.tagName === 'BODY' || el.tagName === 'HTML' || el.tagName === 'HEAD') {
             continue;
         }
 
         const htmlEl = el as HTMLElement;
 
-        if (shouldShow) {
-            htmlEl.style.transition = 'opacity ease-in-out 0.2s';
+        if (isShowing) {
             htmlEl.style.opacity = '0.5';
             htmlEl.style.pointerEvents = 'none';
         } else {
-            htmlEl.style.transition = 'opacity ease-in-out 0.2s';
             htmlEl.style.opacity = '1';
             htmlEl.style.pointerEvents = 'auto';
         }
@@ -212,7 +213,7 @@ function shouldProcessInput() {
 }
 
 function handleNewGame(difficulty: string, didClickDifficulty: boolean) {
-    localStorage.setItem('difficulty', difficulty);
+    setStoredDifficulty(difficultyStringToEnumKeyMap.get(difficulty)!);
 
     boardDimensions = difficultyToDimensionsMap.get(difficulty)!;
     if (didClickDifficulty || columnCount === undefined || rowCount === undefined || mineCount === undefined) {
@@ -230,31 +231,27 @@ function getMaxMineCount() {
 }
 
 function setZoom() {
-    const container = document.getElementById('board-container')!;
+    const maxHeight = getHeightBetweenTopAndBottom() - 60; 
+    const maxWidth = window.innerWidth - 80; 
 
-    const originalHeight = rowCount! * 44;
-    //const originalWidth = columnCount! * 44;
+    const cellByHeight = maxHeight / rowCount!;
+    const cellByWidth = maxWidth / columnCount!;
 
-    const maxHeight = getHeightBetweenTopAndBottom() - 90; 
-    //const maxWidth = window.innerWidth - 320; 
+    const cell = Math.min(cellByHeight, cellByWidth);
 
-    const heightScale = maxHeight / originalHeight;
-    //const widthScale = maxWidth / originalWidth;
-
-    //const scaleFactor = Math.min(heightScale, widthScale);
-    const scaleFactor = maxHeight / originalHeight;
-
-    container.style.transform = `scale(${scaleFactor})`;
+    document.documentElement.style.setProperty('--cell', `${cell}px`);
 }
 
 function getHeightBetweenTopAndBottom() {
-    const topBarElem = document.getElementById('top-bar')!;
-    const topBarHeight: number = topBarElem.offsetHeight;
+    const topBar = document.getElementById('top-bar')!;
+    const bottomBar = document.getElementById('bottom-bar')!
 
-    const bottomBarElem = document.getElementById('bottom-bar')!
-    const bottomBarHeight: number = bottomBarElem.offsetHeight;
+    const topBarBottom = topBar.getBoundingClientRect().bottom;
+    const bottomBarTop = bottomBar.getBoundingClientRect().top;
 
-    return window.innerHeight - topBarHeight - bottomBarHeight;
+    const gap = bottomBarTop - topBarBottom;
+
+    return gap;
 }
 
 function resetDifficultiesUnderlines() {
@@ -434,24 +431,18 @@ function checkIfGameWon() {
 }
 
 function handleNewHighScore() {
-    if (!isPlayingOnNativeDifficulty()) {
+    const difficulty = getNativeDifficultyByDimensions();
+    if (difficulty === undefined) {
         return false;
     }
 
-    const difficulty = difficultyStringToEnumKeyMap.get(
-        Array.from(difficultyToDimensionsMap.entries())
-            .filter(entry => entry[1].rows === rowCount && entry[1].columns === columnCount)[0][0]
-    );
+    const currentHighScore = getHighScore(difficulty);
 
-    if (difficulty !== undefined) {
-        const currentHighScore = getHighScore(difficulty);
-
-        if (Number.isNaN(currentHighScore) || timerVal < currentHighScore) {
-            setHighScore(difficulty, timerVal)
-            return true;
-        }
+    if (Number.isNaN(currentHighScore) || timerVal < currentHighScore) {
+        setHighScore(difficulty, timerVal)
+        return true;
     }
-    
+
     return false;
 }
 
@@ -484,14 +475,22 @@ function setNewGameStyles() {
     handleDifficultyUnderline();
 }
 
-function isPlayingOnNativeDifficulty() {
-    return Array.from(difficultyToDimensionsMap).some(val => val[1].rows === rowCount! && val[1].columns === columnCount!);
+function handleDifficultyUnderline() {
+    const difficulty = getNativeDifficultyByDimensions();
+
+    if (difficulty !== undefined) {
+        setStoredDifficulty(difficulty)
+        document.getElementById(`${difficulty}-btn`)!.classList.add("soft-underline");
+    }
 }
 
-function handleDifficultyUnderline() {
-    if (isPlayingOnNativeDifficulty()) {
-        document.getElementById(`${localStorage.getItem('difficulty')!}-btn`)!.classList.add("soft-underline");
+function getNativeDifficultyByDimensions() {
+    const difficultyStr = Array.from(difficultyToDimensionsMap).find(val => val[1].rows === rowCount! && val[1].columns === columnCount!);
+    if (difficultyStr !== undefined) {
+        return difficultyStringToEnumKeyMap.get(difficultyStr[0]);
     }
+
+    return undefined;
 }
 
 function setFlagsLeft(newValue: number) {
@@ -726,6 +725,10 @@ function generateMineCoordinatesOnInit(exemptCoords: number[][]) {
 
 function getStoredDifficulty() {
     return localStorage.getItem('difficulty')
+}
+
+function setStoredDifficulty(difficulty: Difficulties) {
+    localStorage.setItem('difficulty', difficulty);
 }
 
 function getNeighbours(r: number, c: number) {
