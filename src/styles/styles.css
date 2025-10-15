@@ -86,7 +86,11 @@ p {
 #main-content {
     align-items: center;
     justify-content: center;
+}
+
+#extra-content {
     align-items: center;
+    justify-content: center;
 }
 
 #new-game-btn {
