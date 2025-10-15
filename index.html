@@ -1,85 +1,102 @@
 <!doctype html>
 <html>
     <body>
-        <div id="top-bar">
-            <div class="col-container" style="gap: 5px;">
-                <p class="top-bar-item title">minesweeper</p>
-                <div id="game-info-container" class="row-container">
-                    <p id="flags-remaining-txt" class="game-info-txt">
-                        <span><img src='./src/assets/flag_no_bg.svg' class="flag-img"/></span>
-                        <span class="board-bar-txt" id="flags-left"></span>
-                    </p>
-
-                    <div class="vertical-line-break"></div>
-
-                    <p id="time-txt" class="game-info-txt">
-                        <span class="board-bar-txt" id="timer">0s</span>
-                    </p>
+        <main id="main-content">
+            <div id="top-bar">
+                <!-- first block -->
+                <div class="col-container justify-start align-items-center">
+                    <p class="title">minesweeper</p>
+                    <p id="new-game-btn">new game <span style="font-size: 24px">↺ </span></p>
                 </div>
-            </div>
-            <div class="col-container" style="align-items: center; gap: 10px">
-                <p id="space-btn">new game <span style="font-size: 24px">↺ </span></p>
-                <div class="row-container">
-                    <p id="viable-moves-txt">show viable moves</p>
-                    <input type="checkbox" id="hint-checkbox">
-                </div>
-            </div>
-            <div class="col-container" style="align-items: center; gap: 5px;">
-                <div class="row-container top-bar-item difficulty-btns">
-                    <p id="easy-btn" class="easy-txt difficulty-txt">easy</p>
-                    <p id="medium-btn" class="medium-txt difficulty-txt">medium</p>
-                    <p id="expert-btn" class="expert-txt difficulty-txt">expert</p>
-                </div>
-                <p id="high-scores-btn">view high scores</p>
-            </div>
-        </div>
 
-        <div id="board-container"></div>
+                <!-- second block -->
+                <div class="col-container align-items-center">
+                    <div class="col-container  align-items-center justify-center gap-10">
+                        <div class="row-container">
+                            <p id="viable-moves-txt">show viable moves</p>
+                            <input type="checkbox" id="hint-checkbox">
+                        </div>
 
-        <div id="game-over-container" class="row-container">
-            <p id="game-state-msg"></p>
-            <p id="continue-btn"> continue?</p>
-        </div>
+                        <div id="game-info-container" class="row-container">
+                            <p id="flags-remaining-txt" class="game-info-txt">
+                                <span><img src='./src/assets/flag_no_bg.svg' class="flag-img"/></span>
+                                <span class="board-bar-txt" id="flags-left"></span>
+                            </p>
 
-        <div id="high-scores-modal" class="modal">
-            <p id="close-high-scores-btn">x</p>
-            <div class="col-container">
-                <p id="high-scores-title">high scores</p>
-                <div class="row-container">
-                    <div class="col-container high-scores-list" style="padding-right: 15px;">
-                        <p class="high-score-board-type-txt easy-txt">easy (9x9):</p>
-                        <p class="high-score-board-type-txt medium-txt">medium (16x16):</p>
-                        <p class="high-score-board-type-txt expert-txt">expert (30x16):</p>
-                    </div>
-                    <div class="col-container high-scores-list">
-                        <p id="easy-high-score" class="high-score-board-type-txt"></p>
-                        <p id="medium-high-score" class="high-score-board-type-txt"></p>
-                        <p id="expert-high-score" class="high-score-board-type-txt"></p>
+                            <div class="vertical-line-break"></div>
+
+                            <p id="time-txt" class="game-info-txt">
+                                <span class="board-bar-txt" id="timer">0s</span>
+                            </p>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div id="bottom-bar">
-            <div class="row-container slider-container">
-                <p class="slider-txt">columns</p>
-                <input id="cols-slider" type="range" min="2" max="60">
-                <p id="cols-slider-value" type="text" readonly class="slider-value-txt"></p>
+                <!-- third block -->
+                <div class="col-container align-items-center gap-5">
+                    <div class="row-container difficulty-btns">
+                        <p id="easy-btn" class="easy-txt difficulty-txt">easy</p>
+                        <p id="medium-btn" class="medium-txt difficulty-txt">medium</p>
+                        <p id="expert-btn" class="expert-txt difficulty-txt">expert</p>
+                    </div>
+                    <p id="high-scores-btn">view high scores</p>
+                </div>
             </div>
-            <div class="row-container slider-container">
-                <p class="slider-txt">rows</p>
-                <input id="rows-slider" type="range" min="2" max="60">
-                <p id="rows-slider-value" type="text" readonly class="slider-value-txt"></p>
+
+            <div id="board-container"></div>
+
+            <div id="bottom-bar">
+                <!-- first block -->
+                <div class="row-container slider-container">
+                    <p class="slider-txt">columns</p>
+                    <input id="cols-slider" type="range" min="2" max="60">
+                    <p id="cols-slider-value" type="text" readonly class="slider-value-txt"></p>
+                </div>
+
+                <!-- second block -->
+                <div class="row-container slider-container">
+                    <p class="slider-txt">rows</p>
+                    <input id="rows-slider" type="range" min="2" max="60">
+                    <p id="rows-slider-value" type="text" readonly class="slider-value-txt"></p>
+                </div>
+
+                <!-- third block -->
+                <div class="row-container slider-container">
+                    <p class="slider-txt">mines</p>
+                    <input id="mines-slider" type="range" min="2" max="200">
+                    <p id="mines-slider-value" type="text" readonly class="slider-value-txt"></p>
+                </div>
             </div>
-            <div class="row-container slider-container">
-                <p class="slider-txt">mines</p>
-                <input id="mines-slider" type="range" min="2" max="200">
-                <p id="mines-slider-value" type="text" readonly class="slider-value-txt"></p>
+
+            <!--EXTRA CONTENT-->
+            <div id="game-over-container" class="row-container">
+                <p id="game-state-msg"></p>
+                <p id="continue-btn"> continue?</p>
             </div>
-        </div>
+
+            <div id="high-scores-modal" class="modal">
+                <p id="close-high-scores-btn">x</p>
+                <div class="col-container">
+                    <p id="high-scores-title">high scores</p>
+                    <div class="row-container">
+                        <div class="col-container high-scores-list" style="padding-right: 15px;">
+                            <p class="high-score-board-type-txt easy-txt">easy (9x9):</p>
+                            <p class="high-score-board-type-txt medium-txt">medium (16x16):</p>
+                            <p class="high-score-board-type-txt expert-txt">expert (30x16):</p>
+                        </div>
+                        <div class="col-container high-scores-list">
+                            <p id="easy-high-score" class="high-score-board-type-txt"></p>
+                            <p id="medium-high-score" class="high-score-board-type-txt"></p>
+                            <p id="expert-high-score" class="high-score-board-type-txt"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
 
         <script type="module" src="./dist/main.js"></script>
-        <link rel="stylesheet" type="text/css" href="./src/styles.css">
+        <link rel="stylesheet" type="text/css" href="./src/styles/styles.css">
+        <link rel="stylesheet" type="text/css" href="./src/styles/cell_styles.css">
         <link rel="icon" href="data:,">
     </body>
 </html>
