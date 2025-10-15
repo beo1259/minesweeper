@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Wallpoet&display=swap');
+
 :root { 
     --cell: 44px;
     --soft-underline-color: rgba(255, 255, 255, 0.5);
@@ -92,20 +94,22 @@ p {
     text-decoration-color: white;
 }
 
-#high-scores-modal {
+.modal {
     display: none;
     position: absolute;
     z-index: 999;
-    min-height: 300px;
-    max-height: 300px;
-    min-width: 400px;
-    max-width: 400px;
+    /* min-height: 300px; */
+    /* max-height: 300px; */
+    /* min-width: 400px; */
+    /* max-width: 400px; */
     justify-content: center;
     align-items: center;
-    padding: 20px;
+    padding: 150px 100px;
     border: 3px solid rgba(255, 255, 255, 0.8);
     background-color: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(8px);
+    opacity: 0;
+    transition: opacity ease-in-out 0.2s;
 }
 
 #close-high-scores-btn {
@@ -321,16 +325,15 @@ input[type="range"] {
 }
 
 #game-info-container {
-    justify-content: space-between;
+    justify-content: space-around;
     align-self: center;
-    border: 1px solid rgb(140, 140, 140);
-    padding: 4px 10px;
+    border: 2px dashed rgb(140, 140, 140);
+    padding: 4px 20px;
     width: 215px;
 }
 
 .vertical-line-break {
-    border-right: 1px solid grey;
-    margin: 0 10px;
+    border-right: 2px dashed grey;
 }
 
 .flag-img {
@@ -348,11 +351,11 @@ input[type="range"] {
 }
 
 #timer {
-    font-weight: bold;
+    /* font-weight: bold; */
 }
 
 #flags-left {
-    font-weight: bold;
+    /* font-weight: bold; */
 }
 
 .slider-container {

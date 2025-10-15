@@ -6,20 +6,19 @@
                 <p class="top-bar-item title">minesweeper</p>
                 <div id="game-info-container" class="row-container">
                     <p id="flags-remaining-txt" class="game-info-txt">
-                        <!-- <span><img src='./src/assets/flag.svg' class="flag-img"/></span>left: -->
-                        flags left:
+                        <span><img src='./src/assets/flag_no_bg.svg' class="flag-img"/></span>
                         <span class="board-bar-txt" id="flags-left"></span>
-                    </p> 
+                    </p>
 
                     <div class="vertical-line-break"></div>
 
-                    <p id="time-txt" class="game-info-txt">time: 
+                    <p id="time-txt" class="game-info-txt">
                         <span class="board-bar-txt" id="timer">0s</span>
                     </p>
                 </div>
             </div>
             <div class="col-container" style="align-items: center; gap: 10px">
-                <p id="space-btn">new game (space bar)</p>
+                <p id="space-btn">new game <span style="font-size: 24px">↺ </span></p>
                 <div class="row-container">
                     <p id="viable-moves-txt">show viable moves</p>
                     <input type="checkbox" id="hint-checkbox">
@@ -42,7 +41,7 @@
             <p id="continue-btn"> continue?</p>
         </div>
 
-        <div id="high-scores-modal">
+        <div id="high-scores-modal" class="modal">
             <p id="close-high-scores-btn">x</p>
             <div class="col-container">
                 <p id="high-scores-title">high scores</p>

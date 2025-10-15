@@ -55,6 +55,28 @@ const mineCountMap: Map<string, number> = new Map([
 
 window.onload = () => handleNewGame(getStoredDifficulty() ?? 'medium', false);
 
+document.addEventListener('click', (event) => {
+    if (!isShowingHighScores) {
+        return;
+    }
+
+    const clickX = event.clientX;
+    const clickY = event.clientY;
+
+    const highScoreModal = document.getElementById('high-scores-modal')!;
+    const rect = highScoreModal.getBoundingClientRect();
+    const modalX = rect.x;
+    const modalY = rect.y;
+    const modalHeight = rect.height;
+    const modalWidth = rect.width;
+
+    if (clickX >= modalX && clickX <= modalX + modalWidth && clickY >= modalY && clickY <= modalY + modalHeight) {
+        return;
+    }
+
+    showOrHideHighScores(false);
+}, true);
+
 document.getElementById('easy-btn')!.addEventListener('click', () => handleNewGame('easy', true));
 document.getElementById('medium-btn')!.addEventListener('click', () => handleNewGame('medium', true));
 document.getElementById('expert-btn')!.addEventListener('click', () => handleNewGame('expert', true));
@@ -145,7 +167,16 @@ function showOrHideHighScores(shouldShow: boolean) {
 
 function setStylesOnHighScoresModelAction(shouldShow: boolean) {
     const modal = document.getElementById('high-scores-modal')!;
-    modal.style.display = shouldShow ? 'flex' : 'none';
+    modal.style.display = shouldShow ? 'block' : 'none';
+    modal.style.opacity = shouldShow ? '1' : '0';
+    modal.style.pointerEvents = shouldShow ? 'auto' : 'none';
+
+    if (shouldShow) {
+        for (const difficulty of Object.values(Difficulties)) {
+            const highScore = getHighScore(difficulty);
+            document.getElementById(`${difficulty}-high-score`)!.innerHTML = Number.isNaN(highScore) ? 'never completed' : `${highScore} seconds`
+        }
+    }
 
     const allElements = document.getElementsByTagName('*');
     for (const el of allElements) {
@@ -156,19 +187,13 @@ function setStylesOnHighScoresModelAction(shouldShow: boolean) {
         const htmlEl = el as HTMLElement;
 
         if (shouldShow) {
+            htmlEl.style.transition = 'opacity ease-in-out 0.2s';
             htmlEl.style.opacity = '0.5';
             htmlEl.style.pointerEvents = 'none';
         } else {
+            htmlEl.style.transition = 'opacity ease-in-out 0.2s';
             htmlEl.style.opacity = '1';
             htmlEl.style.pointerEvents = 'auto';
-        }
-    }
-
-    if (shouldShow) {
-        for (const difficulty of Object.values(Difficulties)) {
-            const highScore = getHighScore(difficulty);
-            console.log(highScore);
-            document.getElementById(`${difficulty}-high-score`)!.innerHTML = Number.isNaN(highScore) ? 'never completed' : `${highScore} seconds`
         }
     }
 }
@@ -213,12 +238,12 @@ function setZoom() {
     const maxHeight = getHeightBetweenTopAndBottom() - 90; 
     //const maxWidth = window.innerWidth - 320; 
 
-    // const heightScale = maxHeight / originalHeight;
-    // const widthScale = maxWidth / originalWidth;
+    const heightScale = maxHeight / originalHeight;
+    //const widthScale = maxWidth / originalWidth;
 
     //const scaleFactor = Math.min(heightScale, widthScale);
-    
     const scaleFactor = maxHeight / originalHeight;
+
     container.style.transform = `scale(${scaleFactor})`;
 }
 
@@ -497,7 +522,12 @@ function clearTimer() {
 
 function setTimerVal(value: number) {
     timerVal = value;
-    document.getElementById('timer')!.innerHTML = `${timerVal.toString()}s`;
+
+    // const minuteVal = Math.floor(timerVal / 60);
+    // const secondVal = (timerVal % 60).toString().padStart(2, '0');
+
+    //document.getElementById('timer')!.innerHTML = `${minuteVal.toString()}:${secondVal.toString()}`;
+    document.getElementById('timer')!.innerHTML = timerVal.toString();
 }
 
 function setSliderValues() {
