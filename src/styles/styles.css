@@ -19,6 +19,9 @@ html, body {
 .gap-25 { gap: 25px }
 .align-items-center { align-items: center; }
 .align-items-start { align-items: flex-start; }
+.align-self-start { align-self: flex-start; }
+.align-self-center { align-self: center; }
+.align-self-end { align-self: flex-end; }
 .justify-center { justify-content: center; }
 .justify-start { justify-content: flex-start; }
 
@@ -43,12 +46,18 @@ html, body {
     position: absolute;
     display: grid;
     grid-auto-flow: column;
-    grid-template-columns: repeat(3, 25%);
+    grid-template-columns: repeat(3, 30%);
     top: 20px;
     right: 0; left: 0;
     justify-content: center;
     align-items: center;
     color: white;
+}
+
+.top-bar-block {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #board-container {
@@ -59,14 +68,14 @@ html, body {
     align-self: center;
     justify-self: center;
     transform-origin: top center;
-    transition: transform 0.3s ease-in-out; /* <— smooth scale transition */
+    margin-bottom: 10px;
 }
 
 #bottom-bar {
     position: absolute;
     display: grid;
     grid-auto-flow: column;
-    grid-template-columns: repeat(3, 25%);
+    grid-template-columns: repeat(3, 30%);
     bottom: 50px;
     right: 0; left: 0;
     justify-content: center;

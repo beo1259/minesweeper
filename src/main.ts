@@ -526,7 +526,7 @@ function setTimerVal(value: number) {
     // const secondVal = (timerVal % 60).toString().padStart(2, '0');
 
     //document.getElementById('timer')!.innerHTML = `${minuteVal.toString()}:${secondVal.toString()}`;
-    document.getElementById('timer')!.innerHTML = timerVal.toString();
+    document.getElementById('timer')!.innerHTML = timerVal.toString() + 's';
 }
 
 function setSliderValues() {
