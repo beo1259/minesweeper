@@ -1,9 +1,9 @@
-import { Cell } from "./models/cell.js";
-import { CellStateType } from "./models/cell-states.js";
-import { BoardDimensions } from "./models/board-dimensions.js";
-import { cleanupSolverCache, findViableMoves } from "./solver.js";
-import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, SAMPLE_BOARD } from './models/constants.js';
-import { getCoordKey } from "./utils.js";
+import { Cell } from './models/cell.js';
+import { CellStateType } from './models/cell-states.js';
+import { BoardDimensions } from './models/board-dimensions.js';
+import { cleanupSolverCache, findViableMoves } from './solver.js';
+import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, SAMPLE_BOARD, LOWER_BOUND_BOARD_DIMENSION, LOWER_BOUND_MINE_COUNT } from './models/constants.js';
+import { clamp, getCoordKey } from './utils.js';
 
 let board: Cell[][] = [];
 let previousBoardState: Cell[][] = [];
@@ -11,9 +11,9 @@ let boardDimensions: BoardDimensions = new BoardDimensions(16, 16); // default t
 
 let isGameLost: boolean = false;
 let isGameWon: boolean = false;
-let isFirtClick: boolean = true;
+let isFirstClick: boolean = true;
 
-let columnCount: number | undefined; 
+let colCount: number | undefined; 
 let rowCount: number | undefined; 
 let mineCount: number | undefined; 
 
@@ -30,15 +30,15 @@ let timerId: number = 0;
 let isShowingHighScores: boolean = false;
 
 enum DifficultyType {
-    EASY = "easy",
-    MEDIUM = "medium",
-    EXPERT = "expert",
+    EASY = 'easy',
+    MEDIUM = 'medium',
+    EXPERT = 'expert',
 }
 
 const difficultyStringToEnumKeyMap: Map<string, DifficultyType> = new Map([
-    ["easy", DifficultyType.EASY],
-    ["medium", DifficultyType.MEDIUM],
-    ["expert", DifficultyType.EXPERT],
+    ['easy', DifficultyType.EASY],
+    ['medium', DifficultyType.MEDIUM],
+    ['expert', DifficultyType.EXPERT],
 ])
 
 const difficultyToDimensionsMap: Map<string, BoardDimensions> = new Map([
@@ -98,33 +98,69 @@ hintCheckbox.addEventListener('click', () => {
 document.getElementById('continue-btn')!.addEventListener('click', () => handleContinueGame());
 
 const colsSlider = document.getElementById('cols-slider') as HTMLInputElement;
-colsSlider.oninput = () => {
-    document.getElementById('cols-slider-value')!.innerHTML = colsSlider.value;
-
-    columnCount = parseInt(colsSlider.value); 
-
-    setMaxMines();
-
-    handleNewGame(getStoredDifficulty()!, false)
+colsSlider.oninput = () => { 
+    colsInput.value = colsSlider.value;
+    onColInput(colsSlider.value);
 };
+const colsInput = document.getElementById('cols-input') as HTMLInputElement;
+colsInput.oninput = () => { 
+    colsInput.value = clamp(parseInt(colsInput.value), parseInt(colsSlider.min), parseInt(colsSlider.max)).toString();
+    onColInput(colsInput.value);
+};
+
 const rowsSlider = document.getElementById('rows-slider') as HTMLInputElement;
-rowsSlider.oninput = () => {
-    document.getElementById('rows-slider-value')!.innerHTML = rowsSlider.value;
-
-    rowCount = parseInt(rowsSlider.value); 
-
-    setMaxMines();
-
-    handleNewGame(getStoredDifficulty()!, false)
+rowsSlider.oninput = () => { 
+    rowsInput.value = rowsSlider.value;
+    onRowInput(rowsSlider.value);
 };
+const rowsInput = document.getElementById('rows-input') as HTMLInputElement;
+rowsInput.oninput = () => { 
+    rowsInput.value = clamp(parseInt(rowsInput.value), parseInt(rowsSlider.min), parseInt(rowsSlider.max)).toString();
+    onRowInput(rowsInput.value);
+}
+
 const minesSlider = document.getElementById('mines-slider') as HTMLInputElement;
-minesSlider.oninput = () => {
-    document.getElementById('mines-slider-value')!.innerHTML = minesSlider.value;
-
-    mineCount = parseInt(minesSlider.value); 
-
-    handleNewGame(getStoredDifficulty()!, false)
+minesSlider.oninput = () => { 
+    minesInput.value = minesSlider.value;
+    onMineInput(minesSlider.value) 
 };
+const minesInput = document.getElementById('mines-input') as HTMLInputElement;
+minesInput.oninput = () => { 
+    minesInput.value = clamp(parseInt(minesInput.value), parseInt(minesSlider.min), Math.min(parseInt(minesSlider.max), getMaxMineCount())).toString();
+    onMineInput(minesInput.value); 
+}
+
+function onRowInput(inputVal: string) {
+    rowCount = parseInt(inputVal); 
+    clampMineCount();
+    handleNewGame(getStoredDifficulty()!, false)
+}
+function onColInput(inputVal: string) {
+    colCount = parseInt(inputVal); 
+    clampMineCount();
+    handleNewGame(getStoredDifficulty()!, false)
+}
+function onMineInput(inputVal: string) {
+    mineCount = parseInt(inputVal); 
+    handleNewGame(getStoredDifficulty()!, false)
+}
+function setSliderValues() {
+    clampMineCount();
+
+    const colCountStr = colCount!.toString();
+    colsSlider.value = colCountStr;
+    colsInput.value = clamp(colCount!, parseInt(colsSlider.min), parseInt(colsSlider.max)).toString();
+
+    const rowCountStr = rowCount!.toString();
+    rowsSlider.value = rowCountStr;
+    rowsInput.value = clamp(rowCount!, parseInt(rowsSlider.min), parseInt(rowsSlider.max)).toString();
+
+    const mineCountStr = mineCount!.toString();
+    minesSlider.value = mineCountStr;
+    const maxMineCount = getMaxMineCount();
+    const mineCountUpperBound = Number.isNaN(maxMineCount) ? 999 : maxMineCount;
+    minesInput.value = clamp(mineCount!, parseInt(minesSlider.min), Math.min(parseInt(minesSlider.max), mineCountUpperBound)).toString();
+}
 
 window.addEventListener('resize', () => setZoom());
 
@@ -134,12 +170,12 @@ document.addEventListener('keydown', (e) => {
     const hoveredRowAndColumn = getHoveredRowAndColumn();
 
     const k = e.key.toLowerCase();
-    if (k === "f") handleOpenCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
-    else if (k === "g") handleCellSecondaryClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+    if (k === 'f') handleOpenCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
+    else if (k === 'g') handleCellSecondaryClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
 });
 
 document.addEventListener('keyup', (e) => {
-    if (e.key === " " && !isShowingHighScores) {
+    if (e.key === ' ' && !isShowingHighScores) {
         startGame();
         return;
     }
@@ -149,7 +185,7 @@ document.addEventListener('keyup', (e) => {
     const hoveredRowAndColumn = getHoveredRowAndColumn();
 
     const k = e.key.toLowerCase();
-    if (k === "f") processCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]); 
+    if (k === 'f') processCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]); 
 });
 
 document.addEventListener('mouseup', (e) => {
@@ -221,8 +257,8 @@ function handleNewGame(difficulty: string, didClickDifficulty: boolean) {
     setStoredDifficulty(difficultyStringToEnumKeyMap.get(difficulty)!);
 
     boardDimensions = difficultyToDimensionsMap.get(difficulty)!;
-    if (didClickDifficulty || columnCount === undefined || rowCount === undefined || mineCount === undefined) {
-        columnCount = boardDimensions.columns;
+    if (didClickDifficulty || colCount === undefined || rowCount === undefined || mineCount === undefined) {
+        colCount = boardDimensions.columns;
         rowCount = boardDimensions.rows;
         mineCount = mineCountMap.get(difficulty);
     }
@@ -232,17 +268,19 @@ function handleNewGame(difficulty: string, didClickDifficulty: boolean) {
 }
 
 function getMaxMineCount() {
-    return rowCount! * columnCount! - 1;
+    let safeRowCount = Number.isNaN(rowCount) ? LOWER_BOUND_BOARD_DIMENSION : rowCount!;
+    let safeColCount = Number.isNaN(colCount) ? LOWER_BOUND_BOARD_DIMENSION : colCount!;
+
+    return safeRowCount * safeColCount - 1;
 }
 
-function setMaxMines() {
+function clampMineCount() {
     const maxMineCount = getMaxMineCount();
+    minesSlider.max = maxMineCount.toString();
 
-    const maxMineCountStr = maxMineCount.toString();
-    minesSlider.max = maxMineCountStr;
-
-    mineCount = Math.min(maxMineCount, mineCount!);
-    minesSlider.value = mineCount!.toString();
+    mineCount = clamp(mineCount!, 1, maxMineCount);
+    minesSlider.value = mineCount.toString();
+    minesInput.value = mineCount.toString();
 }
 
 function setZoom() {
@@ -250,7 +288,7 @@ function setZoom() {
     const maxWidth = window.innerWidth - 80; 
 
     const cellByHeight = maxHeight / rowCount!;
-    const cellByWidth = maxWidth / columnCount!;
+    const cellByWidth = maxWidth / colCount!;
 
     const cell = Math.floor(Math.min(cellByHeight, cellByWidth));
 
@@ -272,7 +310,7 @@ function getHeightBetweenTopAndBottom() {
 function resetDifficultyTypeUnderlines() {
     Object.values(DifficultyType).forEach(d => {
         const difficultyBtn = document.getElementById(`${d}-btn`)!;
-        difficultyBtn.classList.remove("soft-underline");
+        difficultyBtn.classList.remove('soft-underline');
     });
 }
 
@@ -282,8 +320,9 @@ function startGame() {
 
     isGameLost = false;
     isGameWon = false;
-    isFirtClick = true;
+    isFirstClick = true;
 
+    setSliderValues();
     initEmptyBoard();
     setNewGameStyles();
     cleanupSolverCache();
@@ -299,7 +338,7 @@ function initEmptyBoard() {
 
     for (let r = 0; r < rowCount!; r++) {
         board[r] = []
-        for (let c = 0; c < columnCount!; c++) {
+        for (let c = 0; c < colCount!; c++) {
             board[r][c] = new Cell(r, c, 0, CellStateType.SAFE, false, false);
         }
     }
@@ -360,8 +399,14 @@ function hidePreviouslyXrayedNeigbours() {
     }
 }
 
+function cloneBoard(): Cell[][] {
+  return board.map(row => row.map(
+    c => new Cell(c.r, c.c, c.value, c.cellState, c.isOpen, c.isFlagged)
+  ));
+}
+
 function handleCellMainClick(r: number, c: number): void {
-    previousBoardState = JSON.parse(JSON.stringify(board));
+    previousBoardState = cloneBoard();
     hidePreviouslyXrayedNeigbours();
 
     const cell = board[r][c];
@@ -369,11 +414,10 @@ function handleCellMainClick(r: number, c: number): void {
         return;
     }
 
-    if (isFirtClick) {
+    if (isFirstClick) {
         handleFirstClick(r, c);
 
         if (checkIfGameWon()) { // game is won immediately if only one safe cell in board
-            showMineLocations();
             return;
         }
     }
@@ -395,9 +439,7 @@ function handleCellMainClick(r: number, c: number): void {
         return;
     }
 
-    if (checkIfGameWon()) {
-        showMineLocations();
-    }
+    checkIfGameWon();
 }
 
 function handleCellSecondaryClick(r: number, c: number): void {
@@ -426,10 +468,11 @@ function checkIfGameLost(openedCell: Cell) {
     document.getElementById('game-state-msg')!.innerHTML = 'you lost;&nbsp;';
     document.getElementById('game-state-msg')!.className = 'txt lose-msg';
     document.getElementById('continue-btn')!.style.display = 'block';
-    document.getElementById('board-container')!.style.filter = 'blur(1px)';
+    //document.getElementById('board-container')!.style.filter = 'blur(1px)';
     document.getElementById('game-over-container')!.style.display = 'flex';
     document.getElementById('game-over-container')!.style.boxShadow = '10px 10px 0 red, -10px -10px 0 red';
 
+    showMineLocations();
     return true;
 }
 
@@ -443,10 +486,11 @@ function checkIfGameWon() {
 
     document.getElementById('game-state-msg')!.innerHTML = handleNewHighScore() ? `you won! new highscore ${timerVal} seconds!` : 'you won!';
     document.getElementById('game-state-msg')!.className = 'txt win-msg';
-    document.getElementById('board-container')!.style.filter = 'blur(1px)';
+    //document.getElementById('board-container')!.style.filter = 'blur(1px)';
     document.getElementById('game-over-container')!.style.display = 'flex';
     document.getElementById('game-over-container')!.style.boxShadow = '10px 10px 0 gold, -10px -10px 0 gold';
 
+    showMineLocations();
     return true;
 }
 
@@ -487,8 +531,6 @@ function setNewGameStyles() {
     document.getElementById('continue-btn')!.style.display = 'none';
     document.getElementById('game-over-container')!.style.display = 'none';
 
-
-    setSliderValues();
     setFlagsLeft(mineCount!);
 
     resetDifficultyTypeUnderlines();
@@ -502,14 +544,18 @@ function handleDifficultyUnderline() {
 
     if (difficulty !== undefined) {
         setStoredDifficulty(difficulty)
-        document.getElementById(`${difficulty}-btn`)!.classList.add("soft-underline");
+        document.getElementById(`${difficulty}-btn`)!.classList.add('soft-underline');
     }
 }
 
 function getNativeDifficultyByDimensions() {
-    const difficultyStr = Array.from(difficultyToDimensionsMap).find(val => val[1].rows === rowCount! && val[1].columns === columnCount!);
+    const difficultyStr = Array.from(difficultyToDimensionsMap).find(val => val[1].rows === rowCount! && val[1].columns === colCount!);
     if (difficultyStr !== undefined) {
-        return difficultyStringToEnumKeyMap.get(difficultyStr[0]);
+        const difficultyType = difficultyStringToEnumKeyMap.get(difficultyStr[0])!;
+
+        if (mineCountMap.get(difficultyType) === mineCount!) {
+            return difficultyType;
+        }
     }
 
     return undefined;
@@ -533,22 +579,10 @@ function setTimerVal(value: number) {
     document.getElementById('timer')!.innerHTML = timerVal.toString() + 's';
 }
 
-function setSliderValues() {
-    minesSlider.max = getMaxMineCount().toString();
-
-    document.getElementById('cols-slider-value')!.innerHTML = columnCount!.toString();
-    document.getElementById('rows-slider-value')!.innerHTML = rowCount!.toString();
-    document.getElementById('mines-slider-value')!.innerHTML = mineCount!.toString();
-
-    colsSlider.value = columnCount!.toString();
-    rowsSlider.value = rowCount!.toString();
-    minesSlider.value = mineCount!.toString();
-}
-
 function showMineLocations() {
     board.forEach(row => {
         for (const cell of row) {
-            if (cell.cellState === CellStateType.MINE) {
+            if (cell.cellState === CellStateType.MINE && !cell.isOpen) {
                 getHtmlElementByCoords(cell.r, cell.c)!.className = `cell ${CELL_MINE_CLASSNAME}`;
             }
         }
@@ -576,7 +610,6 @@ function handleChord(cell: Cell) {
         }
 
         if (checkIfGameWon()) {
-            showMineLocations();
             return;
         }
     }
@@ -616,7 +649,7 @@ function floodAndFill(r: number, c: number) {
 function handleFirstClick(clickedRow: number, clickedCol: number) {
     initBoardOnFirstClick(clickedRow, clickedCol);
 
-    isFirtClick = false;
+    isFirstClick = false;
 
     startTimer();
 }
@@ -646,7 +679,7 @@ function initBoardOnFirstClick(firstClickRow: number, firstClickCol: number): vo
     // return;
 
     const firstClickNeighbours = getNeighbours(firstClickRow, firstClickCol).map(n => getCoordKey(n.r, n.c));
-    const maxPossibleSafeSquares = Math.min(1 + firstClickNeighbours.length, (rowCount! * columnCount!) - mineCount!); 
+    const maxPossibleSafeSquares = Math.min(1 + firstClickNeighbours.length, (rowCount! * colCount!) - mineCount!); 
 
     const safeSquaresOnInit: Set<string> = new Set(
         [
@@ -658,7 +691,7 @@ function initBoardOnFirstClick(firstClickRow: number, firstClickCol: number): vo
     const mineCoordKeys = generateMineCoordinatesOnInit(safeSquaresOnInit);
 
     for (let r = 0; r < rowCount!; r++) {
-        for (let c = 0; c < columnCount!; c++) {
+        for (let c = 0; c < colCount!; c++) {
             const isMine = mineCoordKeys.has(getCoordKey(r, c));
 
             if (isMine) {
@@ -684,12 +717,12 @@ function generateMineCoordinatesOnInit(exemptCoords: Set<string>) {
     const mines: Set<string> = new Set();
     for (let i = 0; i < mineCount!; i++) {
         let r = getRandomCoord(rowCount!);
-        let c = getRandomCoord(columnCount!);
+        let c = getRandomCoord(colCount!);
         let coordKey = getCoordKey(r, c);
 
         while (isExempt(coordKey) || mines.has(coordKey)) {
             r = getRandomCoord(rowCount!);
-            c = getRandomCoord(columnCount!);
+            c = getRandomCoord(colCount!);
             coordKey = getCoordKey(r, c);
         }
 
@@ -715,12 +748,12 @@ function getCellSurroundingMineCount(r: number, c: number, mineCoordKeys: Set<st
 function drawBoard(): void {
     let boardContainer = document.getElementById('board-container')!;
     boardContainer.innerHTML = '';
-    boardContainer.style.setProperty('--cols', String(columnCount));
+    boardContainer.style.setProperty('--cols', String(colCount));
     boardContainer.style.setProperty('--rows', String(rowCount));
     boardContainer.addEventListener('contextmenu', (e) => e.preventDefault());
 
     for (let r = 0; r < rowCount!; r++) {
-        for (let c = 0; c < columnCount!; c++) {
+        for (let c = 0; c < colCount!; c++) {
             var elem = document.createElement('div');
             boardContainer.appendChild(elem);
 
@@ -758,7 +791,7 @@ function getNeighbours(r: number, c: number) {
 
         if (
             targetRow < 0 || targetRow > rowCount! - 1
-            || targetCol < 0 || targetCol > columnCount! - 1
+            || targetCol < 0 || targetCol > colCount! - 1
         ) {
             continue;
         }
@@ -806,7 +839,7 @@ function getCellClassName(cell: Cell): string {
             case 8:
                 return CELL_8_CLASSNAME;
             default:
-                throw new Error("Cell is invalid");
+                throw new Error('Cell is invalid');
         }
     }
 }
@@ -824,7 +857,7 @@ function updateCell(updatedCell: Cell) {
 
 function assignCellDefaultClassName(r: number, c: number, classNameToAssign: string) {
     if (!DEFAULT_CELL_CLASSNAMES.includes(classNameToAssign)) {
-        throw new Error("Invalid cell classname");
+        throw new Error('Invalid cell classname');
     }
 
     const elem = getHtmlElementByCoords(r, c)!;
@@ -885,7 +918,7 @@ function drawTitle() {
             randColor = colors[randIndex];
         }
 
-        spanElements.push(`<span class="title-char" style="color: rgb(${randColor});">${char}</span>`)
+        spanElements.push(`<span class='title-char' style='color: rgb(${randColor});'>${char}</span>`)
     }
 
     el.innerHTML = spanElements.join('');

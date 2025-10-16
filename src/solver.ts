@@ -1,7 +1,7 @@
-import { PlayerKnownCell } from "./models/player-known-cell.js";
-import { Cell } from "./models/cell.js";
+import { PlayerKnownCell } from './models/player-known-cell.js';
+import { Cell } from './models/cell.js';
 import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME } from './models/constants.js';
-import { getMapAsCanonicalKey, areAnyCellsOpen, getCoordKey, getCoordTupleFromKey } from "./utils.js";
+import { getMapAsCanonicalKey, areAnyCellsOpen, getCoordKey, getCoordTupleFromKey } from './utils.js';
 
 /*
  * This file contains the logic for solving a board's certain mine/safe cells.
@@ -256,7 +256,7 @@ function getCellProbabilities(validAssignments: Set<string>[]) {
 
 function setStartingCellKnowledge(frontierArr: PlayerKnownCell[], openNumberCellsArr: PlayerKnownCell[]) {
     if (frontierArr.length !== 0 || openNumberCellsArr.length !== 0) {
-        throw new Error("frontierArr & openNumberCellsArr should be empty")
+        throw new Error('frontierArr & openNumberCellsArr should be empty')
     }
 
     for (const row of knownBoard) {

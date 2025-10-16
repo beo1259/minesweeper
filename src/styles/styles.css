@@ -217,8 +217,7 @@ input[type="checkbox"] {
     border: 2px solid var(--light-grey);
 }
 
-input[type="checkbox"]:checked {
-}
+input[type="checkbox"]:checked { }
 
 input[type="checkbox"]:checked::after {
     content: '';
@@ -304,6 +303,18 @@ input[type="checkbox"]:checked::after {
     cursor: pointer;
 }
 
+input[type="range"] {
+    -webkit-appearance: none; 
+    appearance: none; 
+    background: rgb(200, 200, 200);
+    cursor: pointer;
+    border: none;
+    outline: none; 
+    margin-top: 4px;
+    height: 8px;
+    width: 15vw;
+}
+
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
@@ -318,20 +329,33 @@ input[type="range"]::-webkit-slider-thumb {
     border: none;
 }
 
-#mines-slider::-webkit-slider-thumb {
-    background-image: url('../assets/mine.svg'); 
+.slider-container {
+    align-self: center;
+    justify-self: center;
+    align-items: center;
+    justify-content: center;
 }
 
-input[type="range"] {
-    -webkit-appearance: none; 
-    appearance: none; 
-    background: rgb(200, 200, 200);
-    cursor: pointer;
+.slider-txt {
+    font-size: 23px;
+    color: white;
+    padding-right: 7px;
+}
+
+.slider-value-input {
+    font-size: 23px;
+    color: white;
     border: none;
-    outline: none; 
-    margin-top: 9px;
-    height: 8px;
-    width: 180px;
+    background-color: transparent;
+    font-family: "Times New Roman";
+    text-decoration: underline;
+    text-decoration-color: var(--dim-grey);
+    text-align: center;
+    width: calc(23px * 2 + 5px);
+}
+
+#mines-slider::-webkit-slider-thumb {
+    background-image: url('../assets/mine.svg'); 
 }
 
 #game-info-container {
@@ -371,21 +395,4 @@ input[type="range"] {
 
 #flags-left {
     /* font-weight: bold; */
-}
-
-.slider-container {
-    align-self: center;
-    justify-self: center;
-}
-
-.slider-txt {
-    font-size: 23px;
-    color: white;
-    padding: 0 5px 0 5px;
-}
-
-.slider-value-txt {
-    font-size: 23px;
-    color: white;
-    padding-left: 8px;
 }
