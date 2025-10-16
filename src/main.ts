@@ -374,7 +374,7 @@ function handleOpenCellMainClick(r: number, c: number) {
 
 function xrayNeighbours(r: number, c: number) {
     if (currentlyXrayedCell.length === 2) {
-        hidePreviouslyXrayedNeigbours()
+        hidePreviouslyXrayedNeighbours()
     }
 
     const closedNeighbours = getNeighbours(r, c).filter(n => !n.isOpen && !n.isFlagged);
@@ -385,7 +385,7 @@ function xrayNeighbours(r: number, c: number) {
     currentlyXrayedCell = [r, c];
 }
 
-function hidePreviouslyXrayedNeigbours() {
+function hidePreviouslyXrayedNeighbours() {
     if (currentlyXrayedCell.length === 0) {
         return;
     }
@@ -407,7 +407,7 @@ function cloneBoard(): Cell[][] {
 
 function handleCellMainClick(r: number, c: number): void {
     previousBoardState = cloneBoard();
-    hidePreviouslyXrayedNeigbours();
+    hidePreviouslyXrayedNeighbours();
 
     const cell = board[r][c];
     if (cell.isFlagged) {
