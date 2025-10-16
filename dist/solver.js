@@ -1,5 +1,6 @@
-import { PlayerKnownCell } from "./models/player-known-cell.js";
-import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME } from './constants.js';
+import { PlayerKnownCell } from './models/player-known-cell.js';
+import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME } from './utils/constants.js';
+import { getMapAsCanonicalKey, areAnyCellsOpen, getCoordKey, getCoordTupleFromKey } from './utils/utils.js';
 /*
  * This file contains the logic for solving a board's certain mine/safe cells.
  * ---
@@ -44,7 +45,7 @@ stateStatusMap, // the status of each state that has been seen
 openNumberCellCoordKeys, // the coordinate key ('x,y') of each open numbered cell (> 0)
 validStates, // all of the valid states that we've found (ie. states where all of the open numbered cells values' are satisfied) - always the leaves 
 unusedFrontierCells) {
-    const curStateStringKey = getMapAsStringKey(curState);
+    const curStateStringKey = getMapAsCanonicalKey(curState);
     const curStateStatus = stateStatusMap.get(curStateStringKey);
     if (curStateStatus === 'solved')
         return true;
@@ -67,7 +68,7 @@ unusedFrontierCells) {
     }
     let anySolved = false;
     for (const state of nextPossibleStates) {
-        const possibleStateStringKey = getMapAsStringKey(state);
+        const possibleStateStringKey = getMapAsCanonicalKey(state);
         const possibleStateStatus = stateStatusMap.get(possibleStateStringKey);
         // make sure we don't revisit already solved states
         if (possibleStateStatus === 'dead' || possibleStateStatus === 'solved') {
@@ -101,14 +102,6 @@ function getNextPossibleValidStates(curState, unusedFrontierCells) {
         }
     }
     return nextPossibleStates;
-}
-function getMapAsStringKey(map) {
-    // create a canonical key that is sorted deterministically, only strings are keys, convert true/false to 1/0 so they arent involved in string sorting. We only want our coords as strings here.
-    return Array.from(map.entries())
-        .sort((a, b) => a[0]
-        .localeCompare(b[0])).map(kv => `${kv[0]}=${kv[1] ? 1 : 0}`)
-        .join(';')
-        .toString();
 }
 function handleMineOdds(validStates) {
     const validMineStatesCoordsOnly = [];
@@ -220,14 +213,14 @@ function getCellProbabilities(validAssignments) {
 }
 function setStartingCellKnowledge(frontierArr, openNumberCellsArr) {
     if (frontierArr.length !== 0 || openNumberCellsArr.length !== 0) {
-        throw new Error("frontierArr & openNumberCellsArr should be empty");
+        throw new Error('frontierArr & openNumberCellsArr should be empty');
     }
     for (const row of knownBoard) {
         for (const cell of row) {
-            if (isPlayerKnowCellFrontierCell(cell, getPlayerKnownNeighbours(cell.r, cell.c))) {
+            if (isPlayerKnownCellFrontierCell(cell, getPlayerKnownNeighbours(cell.r, cell.c))) {
                 frontierArr.push(cell);
             }
-            else if (isPlayerKnowCellOpenNumberCell(cell)) {
+            else if (isPlayerKnownCellOpenNumberCell(cell)) {
                 openNumberCellsArr.push(cell);
             }
         }
@@ -247,16 +240,10 @@ function cacheImmediateMineCoords(frontierCellCoordKeys, openNumberCells) {
         }
     }
 }
-function getCoordKey(r, c) {
-    return `${r},${c}`;
-}
-function getCoordTupleFromKey(coordKey) {
-    return coordKey.split(',').map(coord => parseInt(coord));
-}
-function isPlayerKnowCellFrontierCell(cell, neighbours) {
+function isPlayerKnownCellFrontierCell(cell, neighbours) {
     return !cell.isOpen && neighbours.some(n => n.knownValue > 0);
 }
-function isPlayerKnowCellOpenNumberCell(cell) {
+function isPlayerKnownCellOpenNumberCell(cell) {
     return cell.isOpen && cell.knownValue > 0;
 }
 function getPlayerKnownNeighbours(r, c) {
@@ -289,18 +276,4 @@ function getPlayerKnownBoard(board) {
         }
     }
     return knownBoard;
-}
-function areAnyCellsOpen(board) {
-    let atLeastOneCellOpen = false;
-    for (const row of board) {
-        for (const cell of row) {
-            if (cell.isOpen) {
-                atLeastOneCellOpen = true;
-                break;
-            }
-        }
-        if (atLeastOneCellOpen)
-            break;
-    }
-    return atLeastOneCellOpen;
 }

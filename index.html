@@ -59,25 +59,22 @@
             <div id="board-container"></div>
 
             <div id="bottom-bar">
-                <!-- first block -->
                 <div class="row-container slider-container">
                     <p class="slider-txt">columns</p>
                     <input id="cols-slider" type="range" min="2" max="60">
-                    <p id="cols-slider-value" type="text" readonly class="slider-value-txt"></p>
+                    <input id="cols-input" type="number" class="slider-value-input" value="16"></input>
                 </div>
 
-                <!-- second block -->
                 <div class="row-container slider-container">
                     <p class="slider-txt">rows</p>
-                    <input id="rows-slider" type="range" min="2" max="60">
-                    <p id="rows-slider-value" type="text" readonly class="slider-value-txt"></p>
+                    <input id="rows-slider" type="range" min="2" max="60" size="2">
+                    <input id="rows-input" type="number" class="slider-value-input" value="16"></input>
                 </div>
 
-                <!-- third block -->
                 <div class="row-container slider-container">
                     <p class="slider-txt">mines</p>
-                    <input id="mines-slider" type="range" min="2" max="200">
-                    <p id="mines-slider-value" type="text" readonly class="slider-value-txt"></p>
+                    <input id="mines-slider" type="range" min="1" max="119" size="3">
+                    <input id="mines-input" type="number" class="slider-value-input" value="16"></input>
                 </div>
             </div>
 
