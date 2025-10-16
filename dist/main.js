@@ -727,7 +727,9 @@ function drawTitle() {
             colorToUse = randArrayEntry(colors);
         }
         usedColors.push(colorToUse);
-        spanElements.push(`<span class='title-char' style='color: rgb(${colorToUse});'>${title[i]}</span>`);
+        // const style = `color: rgb(${colorToUse}); text-shadow: 0 0 35px rgb(${colorToUse});`;
+        const style = `color: rgb(${colorToUse});`;
+        spanElements.push(`<span class='title-char' style='${style}'>${title[i]}</span>`);
     }
     el.innerHTML = spanElements.join('');
 }
