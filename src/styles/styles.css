@@ -60,7 +60,7 @@ html, body {
 #top-bar {
     position: absolute;
     display: grid;
-    grid-template-columns: repeat(3, 25%);
+    grid-template-columns: 15% 40% 15%;
     top: 20px;
     right: 0; left: 0;
     justify-content: center;
@@ -114,9 +114,9 @@ p {
 
 .title-char {
     display: inline-block;
-    width: 30px;
-    height: 30px;
-    line-height: 30px;
+    width: 35px;
+    height: 35px;
+    line-height: 35px;
     text-align: center;
     background-color: rgb(58, 64, 71);
     border: 2px solid rgb(32, 38, 45);
@@ -145,6 +145,17 @@ p {
     text-decoration-color: white;
 }
 
+#high-scores-btn {
+    color: var(--lightest-grey);
+    font-size: 22px;
+    text-decoration: underline;
+    text-decoration-color: var(--soft-underline-color);
+}
+#high-scores-btn:hover {
+    cursor: pointer;
+    text-decoration-color: white;
+}
+
 #high-scores-title {
     font-size: 30px;
     color: gold;
@@ -152,17 +163,6 @@ p {
     top: 60px;
     text-decoration: underline;
     text-decoration-color: var(--soft-underline-color)
-}
-
-#high-scores-btn {
-    color: var(--lightest-grey);
-    font-size: 20px;
-    text-decoration: underline;
-    text-decoration-color: var(--soft-underline-color);
-}
-#high-scores-btn:hover {
-    cursor: pointer;
-    text-decoration-color: white;
 }
 
 .modal {
@@ -201,7 +201,7 @@ p {
 #viable-moves-txt {
     color: gold;
     font-size: 22px;
-    padding-right: 3px;
+    padding-right: 5px;
 }
 
 input[type="checkbox"] {
@@ -214,8 +214,7 @@ input[type="checkbox"] {
     cursor: pointer;
     position: relative;
     vertical-align: middle;
-    border: 1px solid white;
-    border-radius: 4px;
+    border: 2px solid var(--light-grey);
 }
 
 input[type="checkbox"]:checked {
@@ -224,9 +223,8 @@ input[type="checkbox"]:checked {
 input[type="checkbox"]:checked::after {
     content: '';
     position: absolute;
-    left: 8px;
-    top: 3px;
-    left: 7px;
+    left: 6px;
+    top: 2px;
     width: 4px;
     height: 9px;
     border: solid gold;
@@ -238,10 +236,6 @@ input[type="checkbox"]:checked::after {
     display: flex;
     justify-content: center;
     align-items: center;
-}
-
-.difficulty-txt {
-    font-size:
 }
 
 .easy-txt {

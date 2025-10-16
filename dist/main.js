@@ -153,7 +153,7 @@ function setStylesOnHighScoresModelAction(isShowing) {
         }
         const htmlEl = el;
         if (isShowing) {
-            htmlEl.style.opacity = '0.5';
+            htmlEl.style.opacity = '0.7';
             htmlEl.style.pointerEvents = 'none';
         }
         else {
@@ -679,9 +679,16 @@ function drawTitle() {
         '209, 216, 223',
     ];
     const colorsToPopFrom = structuredClone(colors);
-    for (const char of title) {
+    let indexesNotToPopOn = [];
+    while (indexesNotToPopOn.length < 3) {
+        const index = Math.floor(Math.random() * title.length);
+        if (!indexesNotToPopOn.includes(index)) {
+            indexesNotToPopOn.push(index);
+        }
+    }
+    for (const [i, char] of title.entries()) {
         let randColor = '';
-        if (colorsToPopFrom.length > 0) {
+        if (indexesNotToPopOn.includes(i)) {
             const randIndex = Math.floor(Math.random() * colorsToPopFrom.length);
             randColor = colorsToPopFrom.splice(randIndex, 1)[0];
         }
