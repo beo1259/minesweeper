@@ -36,3 +36,7 @@ export function getCoordTupleFromKey(coordKey: string) {
 export function clamp(value: number, min: number, max: number) {
     return Math.min(Math.max(value, min), max);
 }
+
+export function randArrayEntry(arr: any[]) {
+    return arr[Math.floor(Math.random() * arr.length)];
+}

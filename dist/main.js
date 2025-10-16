@@ -3,7 +3,7 @@ import { CellStateType } from './models/cell-states.js';
 import { BoardDimensions } from './models/board-dimensions.js';
 import { cleanupSolverCache, findViableMoves } from './solver.js';
 import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, LOWER_BOUND_BOARD_DIMENSION } from './utils/constants.js';
-import { clamp, getCoordKey } from './utils/utils.js';
+import { clamp, getCoordKey, randArrayEntry } from './utils/utils.js';
 let board = [];
 let previousBoardState = [];
 let boardDimensions = new BoardDimensions(16, 16); // default to medium board
@@ -719,25 +719,15 @@ function drawTitle() {
         '153, 153, 153',
         '209, 216, 223',
     ];
-    const colorsToPopFrom = structuredClone(colors);
-    let indexesNotToPopOn = [];
-    while (indexesNotToPopOn.length < 3) {
-        const index = Math.floor(Math.random() * title.length);
-        if (!indexesNotToPopOn.includes(index)) {
-            indexesNotToPopOn.push(index);
+    const usedColors = [];
+    for (let i = 0; i < title.length; i++) {
+        const randColor = randArrayEntry(colors);
+        let colorToUse = randColor;
+        while (i !== 0 && usedColors[usedColors.length - 1] === colorToUse) {
+            colorToUse = randArrayEntry(colors);
         }
-    }
-    for (const [i, char] of title.entries()) {
-        let randColor = '';
-        if (indexesNotToPopOn.includes(i)) {
-            const randIndex = Math.floor(Math.random() * colorsToPopFrom.length);
-            randColor = colorsToPopFrom.splice(randIndex, 1)[0];
-        }
-        else {
-            const randIndex = Math.floor(Math.random() * colors.length);
-            randColor = colors[randIndex];
-        }
-        spanElements.push(`<span class='title-char' style='color: rgb(${randColor});'>${char}</span>`);
+        usedColors.push(colorToUse);
+        spanElements.push(`<span class='title-char' style='color: rgb(${colorToUse});'>${title[i]}</span>`);
     }
     el.innerHTML = spanElements.join('');
 }

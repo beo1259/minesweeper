@@ -60,16 +60,17 @@ html, body {
 #top-bar {
     position: absolute;
     display: grid;
-    grid-template-columns: 15% 40% 15%;
+    grid-template-columns: 15% 50% 15%;
     top: 20px;
     right: 0; left: 0;
     justify-content: center;
     align-items: center;
     color: white;
+    gap: 14px;
 }
 
 .top-bar-block:nth-child(2) {
-    padding-bottom: 7px;
+    /* padding-bottom: 7px; */
 }
 
 .top-bar-block:nth-child(3n + 1) {
@@ -114,14 +115,14 @@ p {
 
 .title-char {
     display: inline-block;
-    width: 35px;
-    height: 35px;
-    line-height: 35px;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
     text-align: center;
     background-color: rgb(58, 64, 71);
     border: 2px solid rgb(32, 38, 45);
     font-family: 'mine-sweeper';
-    font-size: 15px;
+    font-size: 20px;
 }
 
 #main-content {
