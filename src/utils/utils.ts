@@ -1,5 +1,5 @@
-import { Cell } from "./models/cell.js";
-import { PlayerKnownCell } from "./models/player-known-cell.js";
+import { Cell } from "../models/cell.js";
+import { PlayerKnownCell } from "../models/player-known-cell.js";
 
 export function getMapAsCanonicalKey(map: Map<string, boolean>) {
     // create a canonical key that is sorted deterministically, only strings are keys, convert true/false to 1/0 so they arent involved in string sorting. We only want our coords as strings here.
