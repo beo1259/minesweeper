@@ -42,7 +42,6 @@ const mineCountMap = new Map([
     [DifficultyType.EXPERT, 99],
 ]);
 window.onload = () => {
-    drawTitle();
     handleNewGame(getStoredDifficulty() ?? 'medium', false);
 };
 document.addEventListener('click', (event) => {
@@ -257,6 +256,7 @@ function resetDifficultyTypeUnderlines() {
     });
 }
 function startGame() {
+    drawTitle();
     clearTimer();
     setTimerVal(0);
     isGameLost = false;
@@ -429,7 +429,6 @@ function setNewGameStyles() {
     setFlagsLeft(mineCount);
     resetDifficultyTypeUnderlines();
     handleDifficultyUnderline();
-    drawTitle();
 }
 function handleDifficultyUnderline() {
     const difficulty = getNativeDifficultyByDimensions();

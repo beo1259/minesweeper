@@ -40,3 +40,4 @@ export function clamp(value: number, min: number, max: number) {
 export function randArrayEntry(arr: any[]) {
     return arr[Math.floor(Math.random() * arr.length)];
 }
+

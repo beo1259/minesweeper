@@ -54,7 +54,6 @@ const mineCountMap: Map<string, number> = new Map([
 ]);
 
 window.onload = () => { 
-    drawTitle();
     handleNewGame(getStoredDifficulty() ?? 'medium', false) 
 };
 
@@ -315,6 +314,8 @@ function resetDifficultyTypeUnderlines() {
 }
 
 function startGame() {
+    drawTitle();
+
     clearTimer();
     setTimerVal(0);
 
@@ -535,8 +536,6 @@ function setNewGameStyles() {
 
     resetDifficultyTypeUnderlines();
     handleDifficultyUnderline();
-
-    drawTitle();
 }
 
 function handleDifficultyUnderline() {
