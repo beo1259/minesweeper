@@ -1,4 +1,4 @@
-export enum CellStates {
+export enum CellStateType {
     SAFE,
     MINE,
 }

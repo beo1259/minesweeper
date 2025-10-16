@@ -1,6 +1,7 @@
 import { PlayerKnownCell } from "./models/player-known-cell.js";
 import { Cell } from "./models/cell.js";
-import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME } from './constants.js';
+import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME } from './models/constants.js';
+import { getMapAsCanonicalKey, areAnyCellsOpen, getCoordKey, getCoordTupleFromKey } from "./utils.js";
 
 /*
  * This file contains the logic for solving a board's certain mine/safe cells.
@@ -58,7 +59,7 @@ function r_backtrack(
     validStates: Map<string, boolean>[], // all of the valid states that we've found (ie. states where all of the open numbered cells values' are satisfied) - always the leaves 
     unusedFrontierCells: Set<string>, // all of the frontier cells that we have determined to be 100% safe or 100% mine
 ) {
-    const curStateStringKey = getMapAsStringKey(curState);
+    const curStateStringKey = getMapAsCanonicalKey(curState);
     const curStateStatus = stateStatusMap.get(curStateStringKey);
 
     if (curStateStatus === 'solved') return true;
@@ -83,7 +84,7 @@ function r_backtrack(
 
     let anySolved = false;
     for (const state of nextPossibleStates) {
-        const possibleStateStringKey = getMapAsStringKey(state);
+        const possibleStateStringKey = getMapAsCanonicalKey(state);
         const possibleStateStatus = stateStatusMap.get(possibleStateStringKey);
 
         // make sure we don't revisit already solved states
@@ -125,15 +126,6 @@ function getNextPossibleValidStates(curState: Map<string, boolean>, unusedFronti
     }
 
     return nextPossibleStates;
-}
-
-function getMapAsStringKey(map: Map<string, boolean>) {
-    // create a canonical key that is sorted deterministically, only strings are keys, convert true/false to 1/0 so they arent involved in string sorting. We only want our coords as strings here.
-    return Array.from(map.entries())
-        .sort((a, b) => a[0]
-        .localeCompare(b[0])).map(kv => `${kv[0]}=${kv[1] ? 1 : 0}`)
-        .join(';')
-        .toString();
 }
 
 function handleMineOdds(validStates: Map<string, boolean>[]) {
@@ -269,9 +261,9 @@ function setStartingCellKnowledge(frontierArr: PlayerKnownCell[], openNumberCell
 
     for (const row of knownBoard) {
         for (const cell of row) {
-            if (isPlayerKnowCellFrontierCell(cell, getPlayerKnownNeighbours(cell.r, cell.c))) {
+            if (isPlayerKnownCellFrontierCell(cell, getPlayerKnownNeighbours(cell.r, cell.c))) {
                 frontierArr.push(cell);
-            } else if (isPlayerKnowCellOpenNumberCell(cell)) {
+            } else if (isPlayerKnownCellOpenNumberCell(cell)) {
                 openNumberCellsArr.push(cell);
             }
         }
@@ -295,20 +287,11 @@ function cacheImmediateMineCoords(frontierCellCoordKeys: Set<string>, openNumber
     }
 }
 
-
-function getCoordKey(r: number, c: number) {
-    return `${r},${c}`;
-}
-
-function getCoordTupleFromKey(coordKey: string) {
-    return coordKey.split(',').map(coord => parseInt(coord));
-}
-
-function isPlayerKnowCellFrontierCell(cell: PlayerKnownCell, neighbours: PlayerKnownCell[]) {
+function isPlayerKnownCellFrontierCell(cell: PlayerKnownCell, neighbours: PlayerKnownCell[]) {
     return !cell.isOpen && neighbours.some(n => n.knownValue! > 0);
 }
 
-function isPlayerKnowCellOpenNumberCell(cell: PlayerKnownCell) {
+function isPlayerKnownCellOpenNumberCell(cell: PlayerKnownCell) {
     return cell.isOpen && cell.knownValue! > 0;
 }
 
@@ -353,19 +336,3 @@ function getPlayerKnownBoard(board: Cell[][]) {
 
     return knownBoard;
 }
-
-function areAnyCellsOpen(board: PlayerKnownCell[][]) {
-    let atLeastOneCellOpen = false;
-    for (const row of board) {
-        for (const cell of row) {
-            if (cell.isOpen)  {
-                atLeastOneCellOpen = true;
-                break;
-            }
-        }
-        if (atLeastOneCellOpen) break;
-    }
-
-    return atLeastOneCellOpen;
-}
-
