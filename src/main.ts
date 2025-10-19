@@ -1,8 +1,8 @@
 import { Cell } from './models/cell.js';
 import { CellStateType } from './models/cell-states.js';
 import { BoardDimensions } from './models/board-dimensions.js';
-import { cleanupSolverCache, findViableMoves } from './solver.js';
-import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, SAMPLE_BOARD, LOWER_BOUND_BOARD_DIMENSION, LOWER_BOUND_MINE_COUNT } from './utils/constants.js';
+import { findViableMoves } from './solver.js';
+import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, SAMPLE_BOARD, LOWER_BOUND_BOARD_DIMENSION } from './utils/constants.js';
 import { clamp, getCoordKey, randArrayEntry } from './utils/utils.js';
 
 let board: Cell[][] = [];
@@ -22,6 +22,7 @@ let curHoveredCellDataset: DOMStringMap | null = null;
 let currentlyXrayedCell: number[] = [];
 
 let shouldShowViableMoves: boolean = false;
+let hasShownViableMoves: boolean = false;
 
 let shouldIncrementTime: boolean = false;
 let timerVal: number = 0;
@@ -91,7 +92,7 @@ document.getElementById('close-high-scores-btn')!.addEventListener('click', () =
 const hintCheckbox = document.getElementById('hint-checkbox')! as HTMLInputElement;
 hintCheckbox.addEventListener('click', () => { 
     shouldShowViableMoves = hintCheckbox.checked;
-    checkIfShouldShowViableMoves(); 
+    checkIfShouldShowViableMoves(isFirstClick); 
 });
 
 document.getElementById('continue-btn')!.addEventListener('click', () => handleContinueGame());
@@ -240,8 +241,9 @@ function setStylesOnHighScoresModelAction(isShowing: boolean) {
 }
 
 function processCellMainClick(r: number, c: number) {
+    const wasFirstClick = isFirstClick
     handleCellMainClick(r, c);
-    checkIfShouldShowViableMoves();
+    checkIfShouldShowViableMoves(wasFirstClick);
 }
 
 function getHoveredRowAndColumn() {
@@ -326,10 +328,9 @@ function startGame() {
     setSliderValues();
     initEmptyBoard();
     setNewGameStyles();
-    cleanupSolverCache();
 
     if(shouldShowViableMoves) {
-        findViableMoves(board);
+        findViableMoves(board, true);
     }
 }
 
@@ -351,7 +352,8 @@ function checkIfShouldShowViableMoves() {
     if (!shouldShowViableMoves) {
         hideViableMoves();
     } else {
-        findViableMoves(board);
+        findViableMoves(board, !hasShownViableMoves);
+        hasShownViableMoves = true;
     }
 }
 
@@ -521,7 +523,7 @@ function handleContinueGame() {
     setNewGameStyles();
 
     if (shouldShowViableMoves) {
-        findViableMoves(board);
+        findViableMoves(board, false);
     }
 }
 
@@ -566,16 +568,6 @@ function setFlagsLeft(newValue: number) {
 
 function getFlagsLeft() {
     return parseInt(document.getElementById('flags-left')!.innerHTML); 
-}
-
-function setTimerVal(value: number) {
-    timerVal = value;
-
-    // const minuteVal = Math.floor(timerVal / 60);
-    // const secondVal = (timerVal % 60).toString().padStart(2, '0');
-
-    //document.getElementById('timer')!.innerHTML = `${minuteVal.toString()}:${secondVal.toString()}`;
-    document.getElementById('timer')!.innerHTML = timerVal.toString() + 's';
 }
 
 function showMineLocations() {
@@ -666,6 +658,17 @@ function startTimer() {
         setTimerVal(timerVal);
     }, 1000);
 }
+
+function setTimerVal(value: number) {
+    timerVal = value;
+
+    // const minuteVal = Math.floor(timerVal / 60);
+    // const secondVal = (timerVal % 60).toString().padStart(2, '0');
+
+    //document.getElementById('timer')!.innerHTML = `${minuteVal.toString()}:${secondVal.toString()}`;
+    document.getElementById('timer')!.innerHTML = timerVal.toString();
+}
+
 
 function clearTimer() {
     clearInterval(timerId);
@@ -894,6 +897,8 @@ function drawTitle() {
         '153, 153, 153',
         '209, 216, 223',
     ];
+
+    const colorPickProbabilityMap: Map<string, number> = new Map(colors.map(c => [c, 1]));
 
     const usedColors = [];
     for (let i = 0; i < title.length; i++) {

@@ -18,7 +18,12 @@ let knownBoard: PlayerKnownCell[][] = [];
 let cachedSolvedMines: Set<string> = new Set();
 let cachedSolvedSafes: Set<string> = new Set();
 
-export function findViableMoves(board: Cell[][]) {
+export function findViableMoves(board: Cell[][], shouldClearCache: boolean) {
+    if (shouldClearCache) {
+        cachedSolvedMines = new Set();
+        cachedSolvedSafes = new Set();
+    }
+
     knownBoard = getPlayerKnownBoard(board);
 
     if (areAnyCellsOpen(knownBoard)) {
@@ -26,12 +31,6 @@ export function findViableMoves(board: Cell[][]) {
     } else {
         highlightAllAsSafe();
     }
-}
-
-// called by main.ts when a new game begins - cleans up the caches of known mines/safes
-export function cleanupSolverCache() {
-    cachedSolvedMines = new Set();
-    cachedSolvedSafes = new Set();
 }
 
 function solveForCurrentMove() {
@@ -217,6 +216,7 @@ function areAllNumberedCellsSatisfied(assignedMineCoordKeys: Map<string, boolean
     return true;
 }
 
+// TODO - Forward check all neighbour frontier cells
 function isSafeToPlaceMineAtCell(r: number, c: number, assignedMineCoordKeys: Map<string, boolean>) {
     const numberedNeighbours = getPlayerKnownNeighbours(r, c)
         .filter(n => n.knownValue !== null && n.knownValue > 0);

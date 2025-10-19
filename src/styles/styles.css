@@ -1,3 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Codystar:wght@300;400&display=swap');
+
+html, body {
+    background-color: black;
+    margin: 0;
+    padding: 0;
+    /* font-family: "Codystar", sans-serif; */
+    /* font-weight: 400; */
+    /* font-style: normal; */
+    /* text-shadow: 0 0 2px; */
+    /* -webkit-text-stroke: 0.4px currentColor; */
+}
+
 @font-face {
     font-family: 'mine-sweeper';
     src: url('../assets/mine-sweeper.otf') format('opentype');
@@ -10,12 +23,6 @@
     --lightest-grey: rgb(230, 230, 230);
     --light-grey: rgb(210, 210, 210);
     --dim-grey: rgb(180, 180, 180);
-}
-
-html, body {
-    background-color: black;
-    margin: 0;
-    padding: 0;
 }
 
 .height-100 { height: 100%; }
@@ -96,6 +103,7 @@ html, body {
     align-self: center;
     justify-self: center;
     transform-origin: top center;
+    margin-top: 20px;
 }
 
 #bottom-bar {
@@ -123,6 +131,7 @@ p {
     border: 2px solid rgb(32, 38, 45);
     font-family: 'mine-sweeper';
     font-size: 20px;
+    text-shadow: none;
 }
 
 #main-content {
@@ -174,7 +183,7 @@ p {
     align-items: center;
     padding: 150px 100px;
     border: 3px dashed var(--dim-grey);
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(8px);
 }
 
@@ -348,11 +357,11 @@ input[type="range"]::-webkit-slider-thumb {
     color: white;
     border: none;
     background-color: transparent;
-    font-family: "Times New Roman";
     text-decoration: underline;
     text-decoration-color: var(--dim-grey);
     text-align: center;
     width: calc(23px * 2 + 5px);
+    font-family: 'Times New Roman';
 }
 
 #mines-slider::-webkit-slider-thumb {
@@ -363,8 +372,17 @@ input[type="range"]::-webkit-slider-thumb {
     justify-content: space-around;
     align-self: center;
     border: 2px dashed rgb(140, 140, 140);
-    padding: 4px 20px;
-    width: 215px;
+    padding: 4px 0;
+    width: 255px;
+}
+
+.game-info-txt {
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    font-size: 18px;
+    min-width: 50%;
+    max-width: 50%;
 }
 
 .v-line-break {
@@ -382,18 +400,4 @@ input[type="range"]::-webkit-slider-thumb {
     vertical-align: middle; 
     margin-bottom: 2px;
     margin-right: 4px;
-}
-
-.game-info-txt {
-    margin: 0;
-    padding: 0;
-    font-size: 18px;
-}
-
-#timer {
-    /* font-weight: bold; */
-}
-
-#flags-left {
-    /* font-weight: bold; */
 }

@@ -1,7 +1,7 @@
 import { Cell } from './models/cell.js';
 import { CellStateType } from './models/cell-states.js';
 import { BoardDimensions } from './models/board-dimensions.js';
-import { cleanupSolverCache, findViableMoves } from './solver.js';
+import { findViableMoves } from './solver.js';
 import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, LOWER_BOUND_BOARD_DIMENSION } from './utils/constants.js';
 import { clamp, getCoordKey, randArrayEntry } from './utils/utils.js';
 let board = [];
@@ -16,6 +16,7 @@ let mineCount;
 let curHoveredCellDataset = null;
 let currentlyXrayedCell = [];
 let shouldShowViableMoves = false;
+let hasShownViableMoves = false;
 let shouldIncrementTime = false;
 let timerVal = 0;
 let timerId = 0;
@@ -70,7 +71,7 @@ document.getElementById('close-high-scores-btn').addEventListener('click', () =>
 const hintCheckbox = document.getElementById('hint-checkbox');
 hintCheckbox.addEventListener('click', () => {
     shouldShowViableMoves = hintCheckbox.checked;
-    checkIfShouldShowViableMoves();
+    checkIfShouldShowViableMoves(isFirstClick);
 });
 document.getElementById('continue-btn').addEventListener('click', () => handleContinueGame());
 const colsSlider = document.getElementById('cols-slider');
@@ -201,8 +202,9 @@ function setStylesOnHighScoresModelAction(isShowing) {
     }
 }
 function processCellMainClick(r, c) {
+    const wasFirstClick = isFirstClick;
     handleCellMainClick(r, c);
-    checkIfShouldShowViableMoves();
+    checkIfShouldShowViableMoves(wasFirstClick);
 }
 function getHoveredRowAndColumn() {
     return [parseInt(curHoveredCellDataset.row), parseInt(curHoveredCellDataset.col)];
@@ -265,9 +267,8 @@ function startGame() {
     setSliderValues();
     initEmptyBoard();
     setNewGameStyles();
-    cleanupSolverCache();
     if (shouldShowViableMoves) {
-        findViableMoves(board);
+        findViableMoves(board, true);
     }
 }
 function initEmptyBoard() {
@@ -285,7 +286,8 @@ function checkIfShouldShowViableMoves() {
         hideViableMoves();
     }
     else {
-        findViableMoves(board);
+        findViableMoves(board, !hasShownViableMoves);
+        hasShownViableMoves = true;
     }
 }
 function hideViableMoves() {
@@ -417,7 +419,7 @@ function handleContinueGame() {
     isGameLost = false;
     setNewGameStyles();
     if (shouldShowViableMoves) {
-        findViableMoves(board);
+        findViableMoves(board, false);
     }
 }
 function setNewGameStyles() {
@@ -452,13 +454,6 @@ function setFlagsLeft(newValue) {
 }
 function getFlagsLeft() {
     return parseInt(document.getElementById('flags-left').innerHTML);
-}
-function setTimerVal(value) {
-    timerVal = value;
-    // const minuteVal = Math.floor(timerVal / 60);
-    // const secondVal = (timerVal % 60).toString().padStart(2, '0');
-    //document.getElementById('timer')!.innerHTML = `${minuteVal.toString()}:${secondVal.toString()}`;
-    document.getElementById('timer').innerHTML = timerVal.toString() + 's';
 }
 function showMineLocations() {
     board.forEach(row => {
@@ -531,6 +526,13 @@ function startTimer() {
         }
         setTimerVal(timerVal);
     }, 1000);
+}
+function setTimerVal(value) {
+    timerVal = value;
+    // const minuteVal = Math.floor(timerVal / 60);
+    // const secondVal = (timerVal % 60).toString().padStart(2, '0');
+    //document.getElementById('timer')!.innerHTML = `${minuteVal.toString()}:${secondVal.toString()}`;
+    document.getElementById('timer').innerHTML = timerVal.toString();
 }
 function clearTimer() {
     clearInterval(timerId);
@@ -718,6 +720,7 @@ function drawTitle() {
         '153, 153, 153',
         '209, 216, 223',
     ];
+    const colorPickProbabilityMap = new Map(colors.map(c => [c, 1]));
     const usedColors = [];
     for (let i = 0; i < title.length; i++) {
         const randColor = randArrayEntry(colors);

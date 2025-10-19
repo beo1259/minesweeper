@@ -63,13 +63,29 @@
     background-image: url('../assets/closed.svg');
 }
 
-.cell-solved-mine {
-    border: 3px solid red;
-    /* transition: border 0.2s ease-in-out; */
+/* .cell-solved-mine { border: 3px solid red; } */
+/* .cell-solved-safe { border: 3px solid rgb(0, 230, 0); } */
+
+.cell-solved-mine,
+.cell-solved-safe {
+    position: relative;
+    overflow: hidden; 
 }
 
-.cell-solved-safe {
-    border: 3px solid rgb(0, 230, 0);
-    /* transition: border 0.2s ease-in-out; */
+.cell-solved-mine::after,
+.cell-solved-safe::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.25;
+    pointer-events: none;
+}
+
+.cell-solved-mine::after {
+    background-color: red;
+}
+
+.cell-solved-safe::after {
+    background-color: rgb(0, 230, 0);
 }
 
