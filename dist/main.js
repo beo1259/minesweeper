@@ -281,12 +281,12 @@ function initEmptyBoard() {
     }
     drawBoard();
 }
-function checkIfShouldShowViableMoves() {
+function checkIfShouldShowViableMoves(shouldClearCache) {
     if (!shouldShowViableMoves) {
         hideViableMoves();
     }
     else {
-        findViableMoves(board, !hasShownViableMoves);
+        findViableMoves(board, shouldClearCache);
         hasShownViableMoves = true;
     }
 }
@@ -720,6 +720,7 @@ function drawTitle() {
         '153, 153, 153',
         '209, 216, 223',
     ];
+    // TODO - reduce the probability that a color is picked each time it is assigned to a letter
     const colorPickProbabilityMap = new Map(colors.map(c => [c, 1]));
     const usedColors = [];
     for (let i = 0; i < title.length; i++) {

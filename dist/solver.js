@@ -11,12 +11,11 @@ import { getMapAsCanonicalKey, areAnyCellsOpen, getCoordKey, getCoordTupleFromKe
  *  Therefore, all safe/mine cells found by the solver can be logically deduced by a player who only sees the board.
 */
 let knownBoard = [];
-let cachedSolvedMines = new Set();
-let cachedSolvedSafes = new Set();
+let cachedCellProbabilityMap = new Map(); // coord -> mine probaility 0 = certain safe, 1 = certain mine)
 export function findViableMoves(board, shouldClearCache) {
     if (shouldClearCache) {
-        cachedSolvedMines = new Set();
-        cachedSolvedSafes = new Set();
+        console.log('cleared');
+        cachedCellProbabilityMap = new Map();
     }
     knownBoard = getPlayerKnownBoard(board);
     if (areAnyCellsOpen(knownBoard)) {
@@ -32,12 +31,15 @@ function solveForCurrentMove() {
     setStartingCellKnowledge(frontierCells, openNumberCells);
     const frontierCellCoordKeys = new Set(frontierCells.map(c => getCoordKey(c.r, c.c)));
     const openNumberCellCoordKeys = new Set(openNumberCells.map(c => getCoordKey(c.r, c.c)));
-    const unusedFrontierCells = new Set(Array.from(frontierCellCoordKeys).filter(f => !cachedSolvedMines.has(f) && !cachedSolvedSafes.has(f)));
+    const unusedFrontierCells = new Set(Array.from(frontierCellCoordKeys).filter(f => {
+        const p = cachedCellProbabilityMap.get(f);
+        return !(p === 0 || p === 1);
+    }));
     const curState = getDefaultState(frontierCellCoordKeys, openNumberCells); // true = mine, false = safe
     const validStates = [];
     const stateStatusMap = new Map();
     r_backtrack(curState, stateStatusMap, openNumberCellCoordKeys, validStates, unusedFrontierCells);
-    handleMineOdds(validStates);
+    handleMineOdds(validStates, frontierCellCoordKeys);
 }
 function r_backtrack(curState, // the state whose possibility branches will be traversed
 stateStatusMap, // the status of each state that has been seen
@@ -102,7 +104,9 @@ function getNextPossibleValidStates(curState, unusedFrontierCells) {
     }
     return nextPossibleStates;
 }
-function handleMineOdds(validStates) {
+function handleMineOdds(validStates, frontierCellCoordKeys) {
+    if (validStates.length === 0)
+        return;
     const validMineStatesCoordsOnly = [];
     const validSafeStatesCoordsOnly = [];
     for (const state of validStates) {
@@ -121,23 +125,41 @@ function handleMineOdds(validStates) {
     }
     const mineProbabilities = getCellProbabilities(validMineStatesCoordsOnly);
     const safeProbabilities = getCellProbabilities(validSafeStatesCoordsOnly);
+    setCachedMineCoordsUponAnalysis(mineProbabilities, safeProbabilities, frontierCellCoordKeys);
     const minesToHighlight = [];
     const safesToHighlight = [];
     for (const [coordKey, mineProbability] of mineProbabilities.entries()) {
         if (mineProbability === 1) {
             const [r, c] = getCoordTupleFromKey(coordKey);
-            cachedSolvedMines.add(coordKey);
             minesToHighlight.push([r, c]);
         }
     }
     for (const [coordKey, safeProbability] of safeProbabilities.entries()) {
         if (safeProbability === 1) {
             const [r, c] = getCoordTupleFromKey(coordKey);
-            cachedSolvedSafes.add(coordKey);
             safesToHighlight.push([r, c]);
         }
     }
     applyStyles(minesToHighlight, safesToHighlight);
+}
+function setCachedMineCoordsUponAnalysis(mineProbabilities, safeProbabilities, frontierCellCoordKeys) {
+    const newCache = new Map();
+    for (const key of frontierCellCoordKeys) {
+        const pMine = mineProbabilities.get(key);
+        const pSafe = safeProbabilities.get(key);
+        let mineP;
+        if (pMine !== undefined) {
+            mineP = pMine;
+        }
+        else if (pSafe !== undefined) {
+            mineP = 1 - pSafe;
+        }
+        else {
+            mineP = 0;
+        }
+        newCache.set(key, mineP);
+    }
+    cachedCellProbabilityMap = newCache;
 }
 function highlightAllAsSafe() {
     requestAnimationFrame(() => {
@@ -228,7 +250,7 @@ function setStartingCellKnowledge(frontierArr, openNumberCellsArr) {
 }
 function getDefaultState(frontierCellCoordKeys, openNumberCells) {
     cacheImmediateMineCoords(frontierCellCoordKeys, openNumberCells);
-    return new Map(Array.from(frontierCellCoordKeys).map(key => [key, cachedSolvedMines.has(key)]));
+    return new Map(Array.from(frontierCellCoordKeys).map(key => [key, cachedCellProbabilityMap.get(key) === 1]));
 }
 function cacheImmediateMineCoords(frontierCellCoordKeys, openNumberCells) {
     for (const cell of openNumberCells) {
@@ -236,7 +258,7 @@ function cacheImmediateMineCoords(frontierCellCoordKeys, openNumberCells) {
             .filter(n => frontierCellCoordKeys.has(getCoordKey(n.r, n.c)));
         // intial prune conditions
         if (frontierNeighbours.length === cell.knownValue) {
-            frontierNeighbours.forEach(n => cachedSolvedMines.add(getCoordKey(n.r, n.c)));
+            frontierNeighbours.forEach(n => cachedCellProbabilityMap.set(getCoordKey(n.r, n.c), 1));
         }
     }
 }

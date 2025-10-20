@@ -15,13 +15,12 @@ import { getMapAsCanonicalKey, areAnyCellsOpen, getCoordKey, getCoordTupleFromKe
 
 let knownBoard: PlayerKnownCell[][] = [];
 
-let cachedSolvedMines: Set<string> = new Set();
-let cachedSolvedSafes: Set<string> = new Set();
+let cachedCellProbabilityMap: Map<string, number> = new Map(); // coord -> mine probaility 0 = certain safe, 1 = certain mine)
 
 export function findViableMoves(board: Cell[][], shouldClearCache: boolean) {
     if (shouldClearCache) {
-        cachedSolvedMines = new Set();
-        cachedSolvedSafes = new Set();
+        console.log('cleared');
+        cachedCellProbabilityMap = new Map();
     }
 
     knownBoard = getPlayerKnownBoard(board);
@@ -41,14 +40,17 @@ function solveForCurrentMove() {
     const frontierCellCoordKeys: Set<string> = new Set(frontierCells.map(c => getCoordKey(c.r, c.c)));
     const openNumberCellCoordKeys: Set<string> = new Set(openNumberCells.map(c => getCoordKey(c.r, c.c)));
 
-    const unusedFrontierCells: Set<string> = new Set(Array.from(frontierCellCoordKeys).filter(f => !cachedSolvedMines.has(f) && !cachedSolvedSafes.has(f)));
+    const unusedFrontierCells: Set<string> = new Set(Array.from(frontierCellCoordKeys).filter(f => { 
+        const p = cachedCellProbabilityMap.get(f);
+        return !(p === 0 || p === 1);
+    }));
 
     const curState: Map<string, boolean> = getDefaultState(frontierCellCoordKeys, openNumberCells); // true = mine, false = safe
     const validStates: Map<string, boolean>[] = [];
     const stateStatusMap: Map<string, 'unknown'|'dead'|'solved'> = new Map();
 
     r_backtrack(curState, stateStatusMap, openNumberCellCoordKeys, validStates, unusedFrontierCells);
-    handleMineOdds(validStates);
+    handleMineOdds(validStates, frontierCellCoordKeys);
 }
 
 function r_backtrack(
@@ -127,7 +129,9 @@ function getNextPossibleValidStates(curState: Map<string, boolean>, unusedFronti
     return nextPossibleStates;
 }
 
-function handleMineOdds(validStates: Map<string, boolean>[]) {
+function handleMineOdds(validStates: Map<string, boolean>[], frontierCellCoordKeys: Set<string>) {
+    if (validStates.length === 0) return;
+
     const validMineStatesCoordsOnly: Set<string>[] = [];
     const validSafeStatesCoordsOnly: Set<string>[] = [];
 
@@ -149,13 +153,15 @@ function handleMineOdds(validStates: Map<string, boolean>[]) {
 
     const mineProbabilities = getCellProbabilities(validMineStatesCoordsOnly);
     const safeProbabilities = getCellProbabilities(validSafeStatesCoordsOnly);
+
+    setCachedMineCoordsUponAnalysis(mineProbabilities, safeProbabilities, frontierCellCoordKeys)
+
     const minesToHighlight: [number, number][] = [];
     const safesToHighlight: [number, number][] = [];
 
     for (const [coordKey, mineProbability] of mineProbabilities.entries()) {
         if (mineProbability === 1) {
             const [r, c] = getCoordTupleFromKey(coordKey);
-            cachedSolvedMines.add(coordKey);
             minesToHighlight.push([r, c])
         }
     }
@@ -163,13 +169,35 @@ function handleMineOdds(validStates: Map<string, boolean>[]) {
     for (const [coordKey, safeProbability] of safeProbabilities.entries()) {
         if (safeProbability === 1) {
             const [r, c] = getCoordTupleFromKey(coordKey);
-            cachedSolvedSafes.add(coordKey);
             safesToHighlight.push([r, c])
         }
     }
 
     applyStyles(minesToHighlight, safesToHighlight)
 }
+
+function setCachedMineCoordsUponAnalysis(mineProbabilities: Map<string, number>, safeProbabilities: Map<string, number>, frontierCellCoordKeys: Set<string>) {
+    const newCache: Map<string, number> = new Map()
+
+    for (const key of frontierCellCoordKeys) {
+        const pMine = mineProbabilities.get(key);
+        const pSafe = safeProbabilities.get(key);
+
+        let mineP: number;
+        if (pMine !== undefined) {
+          mineP = pMine;
+        } else if (pSafe !== undefined) {
+          mineP = 1 - pSafe;
+        } else {
+          mineP = 0;
+        }
+
+        newCache.set(key, mineP);
+    }
+
+    cachedCellProbabilityMap = newCache;
+}
+
 
 function highlightAllAsSafe() {
     requestAnimationFrame(() => {
@@ -272,7 +300,7 @@ function setStartingCellKnowledge(frontierArr: PlayerKnownCell[], openNumberCell
 
 function getDefaultState(frontierCellCoordKeys: Set<string>, openNumberCells: PlayerKnownCell[]) {
     cacheImmediateMineCoords(frontierCellCoordKeys, openNumberCells);
-    return new Map(Array.from(frontierCellCoordKeys).map(key => [key, cachedSolvedMines.has(key)]))
+    return new Map(Array.from(frontierCellCoordKeys).map(key => [key, cachedCellProbabilityMap.get(key) === 1]))
 }
 
 function cacheImmediateMineCoords(frontierCellCoordKeys: Set<string>, openNumberCells: PlayerKnownCell[]) {
@@ -282,7 +310,7 @@ function cacheImmediateMineCoords(frontierCellCoordKeys: Set<string>, openNumber
 
         // intial prune conditions
         if (frontierNeighbours.length === cell.knownValue) {
-            frontierNeighbours.forEach(n => cachedSolvedMines.add(getCoordKey(n.r, n.c)))
+            frontierNeighbours.forEach(n => cachedCellProbabilityMap.set(getCoordKey(n.r, n.c), 1))
         }
     }
 }
