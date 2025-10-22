@@ -207,7 +207,7 @@ function applySettingsAndReset(difficulty, didClickDifficulty) {
     resetGame();
 }
 function resetGame() {
-    handlePause();
+    handlePause(true);
     drawTitle();
     clearTimer();
     setTimerVal(0);
@@ -408,7 +408,7 @@ function handleContinueGame() {
 function setNewGameStyles() {
     document.getElementById('game-state-msg').innerHTML = '';
     document.getElementById('continue-btn').style.display = 'none';
-    document.getElementById('board-container').style.filter = 'none';
+    getBoardContainerElement().style.filter = 'none';
     document.getElementById('continue-btn').style.display = 'none';
     document.getElementById('game-over-container').style.display = 'none';
     setFlagsLeft(mineCount);
@@ -518,13 +518,16 @@ function isShowingHighScores() {
     const el = document.getElementById('high-scores-modal');
     return el.style.display && el.style.display !== 'none';
 }
-function handlePause() {
+function getBoardContainerElement() {
+    return document.getElementById('board-container') ?? boardElementRef;
+}
+function handlePause(isResettingGame = false) {
     if (isFirstClick || isGameWon || isGameLost || isShowingHighScores()) {
         return;
     }
     const pauseContainer = document.getElementById('game-paused-container');
-    const boardContainer = document.getElementById('board-container');
-    const shouldPauseGame = !isGamePaused();
+    const boardContainer = getBoardContainerElement();
+    const shouldPauseGame = !isGamePaused() && !isResettingGame;
     if (shouldPauseGame) {
         boardElementRef = boardContainer;
         boardParent = boardContainer.parentNode;
@@ -608,7 +611,7 @@ function getCellSurroundingMineCount(r, c, mineCoordKeys) {
     return surroundingMineCount;
 }
 function drawBoard() {
-    let boardContainer = document.getElementById('board-container') ?? boardElementRef;
+    let boardContainer = getBoardContainerElement();
     boardContainer.innerHTML = '';
     boardContainer.style.setProperty('--cols', String(colCount));
     boardContainer.style.setProperty('--rows', String(rowCount));

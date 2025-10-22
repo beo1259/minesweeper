@@ -249,7 +249,7 @@ function applySettingsAndReset(difficulty: string, didClickDifficulty: boolean) 
 }
 
 function resetGame() {
-    handlePause();
+    handlePause(true);
 
     drawTitle();
 
@@ -510,7 +510,7 @@ function handleContinueGame() {
 function setNewGameStyles() {
     document.getElementById('game-state-msg')!.innerHTML = '';
     document.getElementById('continue-btn')!.style.display = 'none';
-    document.getElementById('board-container')!.style.filter = 'none';
+    getBoardContainerElement().style.filter = 'none';
     document.getElementById('continue-btn')!.style.display = 'none';
     document.getElementById('game-over-container')!.style.display = 'none';
 
@@ -649,15 +649,19 @@ function isShowingHighScores() {
     return el.style.display && el.style.display !== 'none';
 }
 
-function handlePause() {
+function getBoardContainerElement() {
+    return document.getElementById('board-container')! ?? boardElementRef!;
+}
+
+function handlePause(isResettingGame: boolean = false) {
     if (isFirstClick || isGameWon || isGameLost || isShowingHighScores()) {
         return;
     }
 
     const pauseContainer = document.getElementById('game-paused-container')!;
-    const boardContainer = document.getElementById('board-container')!;
+    const boardContainer = getBoardContainerElement();
 
-    const shouldPauseGame = !isGamePaused();
+    const shouldPauseGame = !isGamePaused() && !isResettingGame;
     if (shouldPauseGame) {
         boardElementRef = boardContainer;
         boardParent = boardContainer.parentNode;
@@ -766,7 +770,7 @@ function getCellSurroundingMineCount(r: number, c: number, mineCoordKeys: Set<st
 }
 
 function drawBoard(): void {
-    let boardContainer = document.getElementById('board-container')! ?? boardElementRef!;
+    let boardContainer = getBoardContainerElement();
     boardContainer.innerHTML = '';
     boardContainer.style.setProperty('--cols', String(colCount));
     boardContainer.style.setProperty('--rows', String(rowCount));
