@@ -24,9 +24,7 @@ let isShowingHighScores = false;
 let boardElementRef = null;
 let boardPlaceholder = null;
 let boardParent = null;
-window.onload = () => {
-    applySettingsAndReset(getStoredDifficulty() ?? 'medium', false);
-};
+window.onload = () => applySettingsAndReset(getStoredDifficulty() ?? 'medium', false);
 document.addEventListener('click', (event) => {
     if (!isShowingHighScores) {
         return;
@@ -209,6 +207,21 @@ function applySettingsAndReset(difficulty, didClickDifficulty) {
     setZoom();
     resetGame();
 }
+function resetGame() {
+    handlePause();
+    drawTitle();
+    clearTimer();
+    setTimerVal(0);
+    isGameLost = false;
+    isGameWon = false;
+    isFirstClick = true;
+    setSliderValues();
+    initEmptyBoard();
+    setNewGameStyles();
+    if (hintCheckbox.checked) {
+        findViableMoves(board, true);
+    }
+}
 function getMaxMineCount() {
     let safeRowCount = Number.isNaN(rowCount) ? LOWER_BOUND_BOARD_DIMENSION : rowCount;
     let safeColCount = Number.isNaN(colCount) ? LOWER_BOUND_BOARD_DIMENSION : colCount;
@@ -242,21 +255,6 @@ function resetDifficultyTypeUnderlines() {
         const difficultyBtn = document.getElementById(`${d}-btn`);
         difficultyBtn.classList.remove('soft-underline');
     });
-}
-function resetGame() {
-    handlePause();
-    drawTitle();
-    clearTimer();
-    setTimerVal(0);
-    isGameLost = false;
-    isGameWon = false;
-    isFirstClick = true;
-    setSliderValues();
-    initEmptyBoard();
-    setNewGameStyles();
-    if (hintCheckbox.checked) {
-        findViableMoves(board, true);
-    }
 }
 function initEmptyBoard() {
     board = [];
