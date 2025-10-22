@@ -1,9 +1,10 @@
 import { Cell } from './models/cell.js';
-import { CellStateType } from './models/cell-states.js';
+import { CellStateType } from './models/enums/cell-state-type.js';
 import { BoardDimensions } from './models/board-dimensions.js';
 import { findViableMoves } from './solver.js';
-import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, SAMPLE_BOARD, LOWER_BOUND_BOARD_DIMENSION } from './utils/constants.js';
+import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, SAMPLE_BOARD, LOWER_BOUND_BOARD_DIMENSION, DIFFICULTY_STRING_TO_ENUM_MAP, DIFFICULTY_TYPE_TO_DIMENSIONS_MAP, DIFFICULTY_TYPE_TO_MINE_COUNT_MAP } from './utils/constants.js';
 import { clamp, getCoordKey, randArrayEntry } from './utils/utils.js';
+import { DifficultyType } from './models/enums/difficulty-type.js';
 
 let board: Cell[][] = [];
 let previousBoardState: Cell[][] = [];
@@ -21,7 +22,6 @@ let curHoveredCellDataset: DOMStringMap | null = null;
 
 let currentlyXrayedCell: number[] = [];
 
-let shouldShowViableMoves: boolean = false;
 let hasShownViableMoves: boolean = false;
 
 let shouldIncrementTime: boolean = false;
@@ -30,32 +30,12 @@ let timerId: number = 0;
 
 let isShowingHighScores: boolean = false;
 
-enum DifficultyType {
-    EASY = 'easy',
-    MEDIUM = 'medium',
-    EXPERT = 'expert',
-}
-
-const difficultyStringToEnumKeyMap: Map<string, DifficultyType> = new Map([
-    ['easy', DifficultyType.EASY],
-    ['medium', DifficultyType.MEDIUM],
-    ['expert', DifficultyType.EXPERT],
-])
-
-const difficultyToDimensionsMap: Map<string, BoardDimensions> = new Map([
-    [DifficultyType.EASY, new BoardDimensions(9, 9)],
-    [DifficultyType.MEDIUM, new BoardDimensions(16, 16)],
-    [DifficultyType.EXPERT, new BoardDimensions(30, 16)],
-]);
-
-const mineCountMap: Map<string, number> = new Map([
-    [DifficultyType.EASY, 10],
-    [DifficultyType.MEDIUM, 40],
-    [DifficultyType.EXPERT, 99],
-]);
+let boardElementRef: HTMLElement | null = null;
+let boardPlaceholder: Comment | null = null;
+let boardParent: Node | null = null;
 
 window.onload = () => { 
-    handleNewGame(getStoredDifficulty() ?? 'medium', false) 
+    applySettingsAndReset(getStoredDifficulty() ?? 'medium', false) 
 };
 
 document.addEventListener('click', (event) => {
@@ -80,18 +60,20 @@ document.addEventListener('click', (event) => {
     showOrHideHighScores(false);
 }, true);
 
-document.getElementById('easy-btn')!.addEventListener('click', () => handleNewGame('easy', true));
-document.getElementById('medium-btn')!.addEventListener('click', () => handleNewGame('medium', true));
-document.getElementById('expert-btn')!.addEventListener('click', () => handleNewGame('expert', true));
+document.getElementById('easy-btn')!.addEventListener('click', () => applySettingsAndReset('easy', true));
+document.getElementById('medium-btn')!.addEventListener('click', () => applySettingsAndReset('medium', true));
+document.getElementById('expert-btn')!.addEventListener('click', () => applySettingsAndReset('expert', true));
 
-document.getElementById('new-game-btn')!.addEventListener('click', () => startGame());
+document.getElementById('new-game-btn')!.addEventListener('click', () => resetGame());
 
 document.getElementById('high-scores-btn')!.addEventListener('click', () => showOrHideHighScores(true));
 document.getElementById('close-high-scores-btn')!.addEventListener('click', () => showOrHideHighScores(false));
 
+const pauseBtn = document.getElementById('pause-btn')!;
+pauseBtn.addEventListener('click', () => handlePause());
+
 const hintCheckbox = document.getElementById('hint-checkbox')! as HTMLInputElement;
 hintCheckbox.addEventListener('click', () => { 
-    shouldShowViableMoves = hintCheckbox.checked;
     checkIfShouldShowViableMoves(isFirstClick); 
 });
 
@@ -133,16 +115,16 @@ minesInput.oninput = () => {
 function onRowInput(inputVal: string) {
     rowCount = parseInt(inputVal); 
     clampMineCount();
-    handleNewGame(getStoredDifficulty()!, false)
+    applySettingsAndReset(getStoredDifficulty()!, false)
 }
 function onColInput(inputVal: string) {
     colCount = parseInt(inputVal); 
     clampMineCount();
-    handleNewGame(getStoredDifficulty()!, false)
+    applySettingsAndReset(getStoredDifficulty()!, false)
 }
 function onMineInput(inputVal: string) {
     mineCount = parseInt(inputVal); 
-    handleNewGame(getStoredDifficulty()!, false)
+    applySettingsAndReset(getStoredDifficulty()!, false)
 }
 function setSliderValues() {
     clampMineCount();
@@ -165,7 +147,7 @@ function setSliderValues() {
 window.addEventListener('resize', () => setZoom());
 
 document.addEventListener('keydown', (e) => {
-    if (!shouldProcessInput()) return;
+    if (!shouldProcessBoardInput()) return;
 
     const hoveredRowAndColumn = getHoveredRowAndColumn();
 
@@ -175,21 +157,21 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.addEventListener('keyup', (e) => {
-    if (e.key === ' ' && !isShowingHighScores) {
-        startGame();
-        return;
-    }
-
-    if (!shouldProcessInput()) return;
-
-    const hoveredRowAndColumn = getHoveredRowAndColumn();
-
     const k = e.key.toLowerCase();
-    if (k === 'f') processCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]); 
+
+    if (k === ' ' && !isShowingHighScores) {
+        resetGame();
+    } else if (k === 'p') {
+        console.log('here');
+        handlePause();
+    } else if (shouldProcessBoardInput() && k === 'f') {
+        const hoveredRowAndColumn = getHoveredRowAndColumn();
+        processCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]); 
+    }
 });
 
 document.addEventListener('mouseup', (e) => {
-    if (!shouldProcessInput()) return;
+    if (!shouldProcessBoardInput()) return;
 
     const hoveredRowAndColumn = getHoveredRowAndColumn();
 
@@ -197,7 +179,7 @@ document.addEventListener('mouseup', (e) => {
 });
 
 document.addEventListener('mousedown', (e) => {
-    if (!shouldProcessInput()) return;
+    if (!shouldProcessBoardInput()) return;
 
     const hoveredRowAndColumn = getHoveredRowAndColumn();
 
@@ -243,6 +225,8 @@ function setStylesOnHighScoresModelAction(isShowing: boolean) {
 function processCellMainClick(r: number, c: number) {
     const wasFirstClick = isFirstClick
     handleCellMainClick(r, c);
+
+    const cell = board[r][c];
     checkIfShouldShowViableMoves(wasFirstClick);
 }
 
@@ -250,22 +234,22 @@ function getHoveredRowAndColumn() {
     return [parseInt(curHoveredCellDataset!.row!), parseInt(curHoveredCellDataset!.col!)];
 }
 
-function shouldProcessInput() {
-    return !isShowingHighScores && !isGameLost && !isGameWon && curHoveredCellDataset?.row !== undefined && curHoveredCellDataset?.col !== undefined;
+function shouldProcessBoardInput() {
+    return !isGamePaused() && !isShowingHighScores && !isGameLost && !isGameWon && curHoveredCellDataset?.row !== undefined && curHoveredCellDataset?.col !== undefined;
 }
 
-function handleNewGame(difficulty: string, didClickDifficulty: boolean) {
-    setStoredDifficulty(difficultyStringToEnumKeyMap.get(difficulty)!);
+function applySettingsAndReset(difficulty: string, didClickDifficulty: boolean) {
+    setStoredDifficulty(DIFFICULTY_STRING_TO_ENUM_MAP.get(difficulty)!);
 
-    boardDimensions = difficultyToDimensionsMap.get(difficulty)!;
+    boardDimensions = DIFFICULTY_TYPE_TO_DIMENSIONS_MAP.get(difficulty)!;
     if (didClickDifficulty || colCount === undefined || rowCount === undefined || mineCount === undefined) {
         colCount = boardDimensions.columns;
         rowCount = boardDimensions.rows;
-        mineCount = mineCountMap.get(difficulty);
+        mineCount = DIFFICULTY_TYPE_TO_MINE_COUNT_MAP.get(difficulty);
     }
 
     setZoom();
-    startGame();
+    resetGame();
 }
 
 function getMaxMineCount() {
@@ -315,7 +299,9 @@ function resetDifficultyTypeUnderlines() {
     });
 }
 
-function startGame() {
+function resetGame() {
+    handlePause();
+
     drawTitle();
 
     clearTimer();
@@ -329,7 +315,7 @@ function startGame() {
     initEmptyBoard();
     setNewGameStyles();
 
-    if(shouldShowViableMoves) {
+    if(hintCheckbox.checked) {
         findViableMoves(board, true);
     }
 }
@@ -349,7 +335,7 @@ function initEmptyBoard() {
 }
 
 function checkIfShouldShowViableMoves(shouldClearCache: boolean) {
-    if (!shouldShowViableMoves) {
+    if (!hintCheckbox.checked) {
         hideViableMoves();
     } else {
         findViableMoves(board, shouldClearCache);
@@ -367,8 +353,7 @@ function hideViableMoves() {
 }
 
 function handleOpenCellMainClick(r: number, c: number) {
-    const cell = board[r][c];
-    if (!cell.isOpen) {
+    if (!board[r][c].isOpen) {
         return;
     }
 
@@ -522,7 +507,7 @@ function handleContinueGame() {
     isGameLost = false;
     setNewGameStyles();
 
-    if (shouldShowViableMoves) {
+    if (hintCheckbox.checked) {
         findViableMoves(board, false);
     }
 }
@@ -550,11 +535,11 @@ function handleDifficultyUnderline() {
 }
 
 function getNativeDifficultyByDimensions() {
-    const difficultyStr = Array.from(difficultyToDimensionsMap).find(val => val[1].rows === rowCount! && val[1].columns === colCount!);
+    const difficultyStr = Array.from(DIFFICULTY_TYPE_TO_DIMENSIONS_MAP).find(val => val[1].rows === rowCount! && val[1].columns === colCount!);
     if (difficultyStr !== undefined) {
-        const difficultyType = difficultyStringToEnumKeyMap.get(difficultyStr[0])!;
+        const difficultyType = DIFFICULTY_STRING_TO_ENUM_MAP.get(difficultyStr[0])!;
 
-        if (mineCountMap.get(difficultyType) === mineCount!) {
+        if (DIFFICULTY_TYPE_TO_MINE_COUNT_MAP.get(difficultyType) === mineCount!) {
             return difficultyType;
         }
     }
@@ -657,6 +642,38 @@ function startTimer() {
 
         setTimerVal(timerVal);
     }, 1000);
+}
+
+function isGamePaused() {
+    return document.getElementById('game-paused-container')!.style.display === 'flex';
+}
+
+function handlePause() {
+    if (isFirstClick) {
+        return;
+    }
+
+    const pauseContainer = document.getElementById('game-paused-container')!;
+    const boardContainer = document.getElementById('board-container')!;
+
+    const shouldPauseGame = !isGamePaused();
+    if (shouldPauseGame) {
+        boardElementRef = boardContainer;
+        boardParent = boardContainer.parentNode;
+        boardPlaceholder = document.createComment('board placeholder');
+
+        boardParent!.replaceChild(boardPlaceholder, boardElementRef);
+
+        pauseContainer.style.display = 'flex';
+        pauseBtn.innerText = '▶︎';
+        shouldIncrementTime = false;
+    } else {
+        boardPlaceholder!.replaceWith(boardElementRef!);
+
+        pauseContainer.style.display = 'none';
+        pauseBtn.innerText = '||';
+        shouldIncrementTime = true;
+    }
 }
 
 function setTimerVal(value: number) {
@@ -898,11 +915,11 @@ function drawTitle() {
         '209, 216, 223',
     ];
 
-    // TODO - reduce the probability that a color is picked each time it is assigned to a letter
-    const colorPickProbabilityMap: Map<string, number> = new Map(colors.map(c => [c, 1]));
+    //const colorPickProbability: [string, number][] = colors.map(c => [c, 1]);
 
     const usedColors = [];
     for (let i = 0; i < title.length; i++) {
+        //const randColor = randArrayEntryWithProbability(colorPickProbability);
         const randColor = randArrayEntry(colors);
         let colorToUse = randColor;
 
@@ -912,7 +929,10 @@ function drawTitle() {
 
         usedColors.push(colorToUse);
 
-        // const style = `color: rgb(${colorToUse}); text-shadow: 0 0 35px rgb(${colorToUse});`;
+        // const arrEntry = colorPickProbability.find(c => c[0] === colorToUse)!;
+        // console.log(arrEntry);
+        // arrEntry[1] = Math.max(0, arrEntry[1] - 0.33);
+
         const style = `color: rgb(${colorToUse});`;
         spanElements.push(`<span class='title-char' style='${style}'>${title[i]}</span>`)
     }

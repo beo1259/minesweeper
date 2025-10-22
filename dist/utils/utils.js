@@ -32,3 +32,12 @@ export function clamp(value, min, max) {
 export function randArrayEntry(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
 }
+export function randArrayEntryWithProbability(arr) {
+    const filled = arr.flatMap(([item, prob]) => {
+        const length = parseInt(prob.toFixed(2)) * 100;
+        return Array.from({ length }).fill(item);
+    });
+    const random = Math.floor(Math.random() * filled.length);
+    console.log(filled[random]);
+    return filled[random];
+}

@@ -17,9 +17,12 @@ let knownBoard: PlayerKnownCell[][] = [];
 
 let cachedCellProbabilityMap: Map<string, number> = new Map(); // coord -> mine probaility 0 = certain safe, 1 = certain mine)
 
+let recursiveCalls: number = 0;
+
 export function findViableMoves(board: Cell[][], shouldClearCache: boolean) {
+    recursiveCalls = 0;
+
     if (shouldClearCache) {
-        console.log('cleared');
         cachedCellProbabilityMap = new Map();
     }
 
@@ -49,7 +52,10 @@ function solveForCurrentMove() {
     const validStates: Map<string, boolean>[] = [];
     const stateStatusMap: Map<string, 'unknown'|'dead'|'solved'> = new Map();
 
+    cleanNonFrontierCellsFromCache(frontierCellCoordKeys);
+
     r_backtrack(curState, stateStatusMap, openNumberCellCoordKeys, validStates, unusedFrontierCells);
+    console.log('recursive calls for move:', recursiveCalls);
     handleMineOdds(validStates, frontierCellCoordKeys);
 }
 
@@ -60,6 +66,8 @@ function r_backtrack(
     validStates: Map<string, boolean>[], // all of the valid states that we've found (ie. states where all of the open numbered cells values' are satisfied) - always the leaves 
     unusedFrontierCells: Set<string>, // all of the frontier cells that we have determined to be 100% safe or 100% mine
 ) {
+    recursiveCalls++;
+
     const curStateStringKey = getMapAsCanonicalKey(curState);
     const curStateStatus = stateStatusMap.get(curStateStringKey);
 
@@ -106,6 +114,14 @@ function r_backtrack(
         stateStatusMap.set(curStateStringKey, 'dead');
         return false;
     }
+}
+
+function cleanNonFrontierCellsFromCache(frontierCellCoordKeys: Set<string>) {
+    Array.from(cachedCellProbabilityMap).forEach(([coordKey, _]) => {
+        if (!frontierCellCoordKeys.has(coordKey)) {
+            cachedCellProbabilityMap.delete(coordKey);
+        }
+    })
 }
 
 function getNextPossibleValidStates(curState: Map<string, boolean>, unusedFrontierCells: Set<string>) {
@@ -201,25 +217,29 @@ function setCachedMineCoordsUponAnalysis(mineProbabilities: Map<string, number>,
 
 function highlightAllAsSafe() {
     requestAnimationFrame(() => {
-        for (const row of knownBoard) {
-            for (const cell of row) {
-                const el = cellEl(cell.r, cell.c);
-                el.classList.add(SOLVED_SAFE_CLASSNAME);
+        requestAnimationFrame(() => {
+            for (const row of knownBoard) {
+                for (const cell of row) {
+                    const el = cellEl(cell.r, cell.c);
+                    el.classList.add(SOLVED_SAFE_CLASSNAME);
+                }
             }
-        }
+        });
     });
 }
 
 function applyStyles(minesToHighlight: [number, number][], safesToHighlight: [number, number][]) {
     requestAnimationFrame(() => {
-        for (const [r, c] of minesToHighlight) { 
-            const el = cellEl(r, c);
-            el.classList.add(SOLVED_MINE_CLASSNAME) 
-        };
-        for (const [r, c] of safesToHighlight) { 
-            const el = cellEl(r, c);
-            el.classList.add(SOLVED_SAFE_CLASSNAME) 
-        };
+        requestAnimationFrame(() => {
+            for (const [r, c] of minesToHighlight) { 
+                const el = cellEl(r, c);
+                el.classList.add(SOLVED_MINE_CLASSNAME) 
+            };
+            for (const [r, c] of safesToHighlight) { 
+                const el = cellEl(r, c);
+                el.classList.add(SOLVED_SAFE_CLASSNAME) 
+            };
+        });
     });
 } 
 
@@ -250,13 +270,19 @@ function isSafeToPlaceMineAtCell(r: number, c: number, assignedMineCoordKeys: Ma
         .filter(n => n.knownValue !== null && n.knownValue > 0);
 
     for (const nn of numberedNeighbours) {
-        const assignedAround = getPlayerKnownNeighbours(nn.r, nn.c)
-            .map(n => getCoordKey(n.r, n.c))
-            .filter(nKey => assignedMineCoordKeys.has(nKey) && assignedMineCoordKeys.get(nKey)).length;
+        const neigbourKeys = getPlayerKnownNeighbours(nn.r, nn.c).map(n => getCoordKey(n.r, n.c));
+        const assignedMines = neigbourKeys.filter(nKey => assignedMineCoordKeys.get(nKey) === true).length;
+        const unknowns = neigbourKeys.filter(nKey => !assignedMineCoordKeys.has(nKey)).length;
+        const target = nn.knownValue!;
 
-        if (assignedAround + 1 > nn.knownValue!) {
+        // check upper bound
+        if (assignedMines + 1 > target) {
             return false;
         }
+
+        // check lower bound (if we don't place a mine here because the upper bound is not satisfied in the above condition, still return false if it's impossible to reach the constraint without the placement)
+        const maxPossibleAfterPlacement = assignedMines + 1 + (unknowns - 1);
+        if (maxPossibleAfterPlacement < target) return false;
     }
 
     return true;
@@ -301,6 +327,9 @@ function setStartingCellKnowledge(frontierArr: PlayerKnownCell[], openNumberCell
 function getDefaultState(frontierCellCoordKeys: Set<string>, openNumberCells: PlayerKnownCell[]) {
     cacheImmediateMineCoords(frontierCellCoordKeys, openNumberCells);
     return new Map(Array.from(frontierCellCoordKeys).map(key => [key, cachedCellProbabilityMap.get(key) === 1]))
+}
+
+function cachePatternDerivedMinesAndSafes(frontierCellCoordKeys: Set<string>, openNumberCells: PlayerKnownCell[]) {
 }
 
 function cacheImmediateMineCoords(frontierCellCoordKeys: Set<string>, openNumberCells: PlayerKnownCell[]) {

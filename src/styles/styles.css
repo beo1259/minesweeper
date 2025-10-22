@@ -20,8 +20,8 @@ html, body {
 
 :root { 
     --soft-underline-color: rgba(255, 255, 255, 0.5);
-    --lightest-grey: rgb(230, 230, 230);
-    --light-grey: rgb(210, 210, 210);
+    --white-grey: rgb(230, 230, 230);
+    --medium-grey: rgb(210, 210, 210);
     --dim-grey: rgb(180, 180, 180);
 }
 
@@ -40,9 +40,9 @@ html, body {
 .align-self-center { align-self: center; }
 .align-self-end { align-self: flex-end; }
 
-.justify-center { justify-content: center; }
-.justify-start { justify-content: flex-start; }
-.justify-end { justify-content: flex-end; }
+.justify-content-center { justify-content: center; }
+.justify-content-start { justify-content: flex-start; }
+.justify-content-end { justify-content: flex-end; }
 
 .justify-self-center { justify-self: center; }
 .justify-self-start { justify-self: flex-start; }
@@ -145,7 +145,7 @@ p {
 }
 
 #new-game-btn {
-    color: var(--lightest-grey);
+    color: var(--white-grey);
     font-size: 22px;
     text-decoration: underline;
     text-decoration-color: var(--soft-underline-color);
@@ -156,7 +156,7 @@ p {
 }
 
 #high-scores-btn {
-    color: var(--lightest-grey);
+    color: var(--white-grey);
     font-size: 22px;
     text-decoration: underline;
     text-decoration-color: var(--soft-underline-color);
@@ -191,7 +191,7 @@ p {
     position: absolute;
     top: 10px;
     right: 15px;
-    color: var(--lightest-grey);
+    color: var(--white-grey);
     font-size: 25px;
     cursor: pointer;
     font-family: Arial;
@@ -224,7 +224,7 @@ input[type="checkbox"] {
     cursor: pointer;
     position: relative;
     vertical-align: middle;
-    border: 2px solid var(--light-grey);
+    border: 2px solid var(--medium-grey);
 }
 
 input[type="checkbox"]:checked { }
@@ -285,7 +285,7 @@ input[type="checkbox"]:checked::after {
     text-shadow: 3px 3px 15px black;
 }
 
-#game-over-container {
+.board-covered {
     display: none;
     position: absolute;
     align-items: center;
@@ -400,4 +400,27 @@ input[type="range"]::-webkit-slider-thumb {
     vertical-align: middle; 
     margin-bottom: 2px;
     margin-right: 4px;
+}
+
+#pause-btn {
+    font-size: 25px;
+    min-width: 25px;
+    max-width: 25px;
+    letter-spacing: 3px;
+    text-align: center;
+    color: var(--dim-grey);
+}
+#pause-btn:hover {
+    color: white;
+    cursor: pointer;
+}
+
+#game-paused-container {
+    display: none;
+    background-color: transparent;
+}
+#pause-msg {
+    color: white;
+    font-size: 50px;
+    text-shadow: 2px 2px 0 black;
 }
