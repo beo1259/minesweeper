@@ -32,7 +32,7 @@ let boardElementRef: HTMLElement | null = null;
 let boardPlaceholder: Comment | null = null;
 let boardParent: Node | null = null;
 
-window.onload = () => applySettingsAndReset(getStoredDifficulty() ?? 'medium', false);
+window.onload = () => applySettingsAndResetGame(getStoredDifficulty() ?? 'medium', false);
 
 document.addEventListener('click', (event) => {
     if (!isShowingHighScores()) {
@@ -56,11 +56,11 @@ document.addEventListener('click', (event) => {
     showOrHideHighScores('close');
 }, true);
 
-document.getElementById('easy-btn')!.addEventListener('click', () => applySettingsAndReset('easy', true));
-document.getElementById('medium-btn')!.addEventListener('click', () => applySettingsAndReset('medium', true));
-document.getElementById('expert-btn')!.addEventListener('click', () => applySettingsAndReset('expert', true));
+document.getElementById('easy-btn')!.addEventListener('click', () => applySettingsAndResetGame('easy', true));
+document.getElementById('medium-btn')!.addEventListener('click', () => applySettingsAndResetGame('medium', true));
+document.getElementById('expert-btn')!.addEventListener('click', () => applySettingsAndResetGame('expert', true));
 
-document.getElementById('new-game-btn')!.addEventListener('click', () => resetGame());
+document.getElementById('new-game-btn')!.addEventListener('click', () => applySettingsAndResetGame(getStoredDifficulty()!, false));
 
 document.getElementById('high-scores-btn')!.addEventListener('click', () => showOrHideHighScores('open'));
 document.getElementById('close-high-scores-btn')!.addEventListener('click', () => showOrHideHighScores('close'));
@@ -111,16 +111,16 @@ minesInput.oninput = () => {
 function onRowInput(inputVal: string) {
     rowCount = parseInt(inputVal); 
     clampMineCount();
-    applySettingsAndReset(getStoredDifficulty()!, false)
+    applySettingsAndResetGame(getStoredDifficulty()!, false)
 }
 function onColInput(inputVal: string) {
     colCount = parseInt(inputVal); 
     clampMineCount();
-    applySettingsAndReset(getStoredDifficulty()!, false)
+    applySettingsAndResetGame(getStoredDifficulty()!, false)
 }
 function onMineInput(inputVal: string) {
     mineCount = parseInt(inputVal); 
-    applySettingsAndReset(getStoredDifficulty()!, false)
+    applySettingsAndResetGame(getStoredDifficulty()!, false)
 }
 function setSliderValues() {
     clampMineCount();
@@ -156,7 +156,7 @@ document.addEventListener('keyup', (e) => {
     const k = e.key.toLowerCase();
 
     if (k === ' ' && !isShowingHighScores()) {
-        resetGame();
+        applySettingsAndResetGame(getStoredDifficulty()!, false);
     } else if (k === 'p') {
         handlePause();
     } else if (shouldProcessBoardInput() && k === 'f') {
@@ -234,7 +234,7 @@ function shouldProcessBoardInput() {
     return !isGamePaused() && !isShowingHighScores() && !isGameLost && !isGameWon && curHoveredCellDataset?.row !== undefined && curHoveredCellDataset?.col !== undefined;
 }
 
-function applySettingsAndReset(difficulty: string, didClickDifficulty: boolean) {
+function applySettingsAndResetGame(difficulty: string, didClickDifficulty: boolean) {
     setStoredDifficulty(DIFFICULTY_STRING_TO_ENUM_MAP.get(difficulty)!);
 
     boardDimensions = DIFFICULTY_TYPE_TO_DIMENSIONS_MAP.get(difficulty)!;
@@ -245,10 +245,6 @@ function applySettingsAndReset(difficulty: string, didClickDifficulty: boolean) 
     }
 
     setZoom();
-    resetGame();
-}
-
-function resetGame() {
     handlePause(true);
 
     drawTitle();
@@ -673,7 +669,9 @@ function handlePause(isResettingGame: boolean = false) {
         pauseBtn.innerText = '▶︎';
         shouldIncrementTime = false;
     } else {
-        boardPlaceholder!.replaceWith(boardElementRef!);
+        if (boardPlaceholder !== null) {
+            boardPlaceholder!.replaceWith(boardElementRef!);
+        }
 
         pauseContainer.style.display = 'none';
         pauseBtn.innerText = '||';

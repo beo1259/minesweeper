@@ -23,7 +23,7 @@ let timerId = 0;
 let boardElementRef = null;
 let boardPlaceholder = null;
 let boardParent = null;
-window.onload = () => applySettingsAndReset(getStoredDifficulty() ?? 'medium', false);
+window.onload = () => applySettingsAndResetGame(getStoredDifficulty() ?? 'medium', false);
 document.addEventListener('click', (event) => {
     if (!isShowingHighScores()) {
         return;
@@ -41,10 +41,10 @@ document.addEventListener('click', (event) => {
     }
     showOrHideHighScores('close');
 }, true);
-document.getElementById('easy-btn').addEventListener('click', () => applySettingsAndReset('easy', true));
-document.getElementById('medium-btn').addEventListener('click', () => applySettingsAndReset('medium', true));
-document.getElementById('expert-btn').addEventListener('click', () => applySettingsAndReset('expert', true));
-document.getElementById('new-game-btn').addEventListener('click', () => resetGame());
+document.getElementById('easy-btn').addEventListener('click', () => applySettingsAndResetGame('easy', true));
+document.getElementById('medium-btn').addEventListener('click', () => applySettingsAndResetGame('medium', true));
+document.getElementById('expert-btn').addEventListener('click', () => applySettingsAndResetGame('expert', true));
+document.getElementById('new-game-btn').addEventListener('click', () => applySettingsAndResetGame(getStoredDifficulty(), false));
 document.getElementById('high-scores-btn').addEventListener('click', () => showOrHideHighScores('open'));
 document.getElementById('close-high-scores-btn').addEventListener('click', () => showOrHideHighScores('close'));
 const pauseBtn = document.getElementById('pause-btn');
@@ -87,16 +87,16 @@ minesInput.oninput = () => {
 function onRowInput(inputVal) {
     rowCount = parseInt(inputVal);
     clampMineCount();
-    applySettingsAndReset(getStoredDifficulty(), false);
+    applySettingsAndResetGame(getStoredDifficulty(), false);
 }
 function onColInput(inputVal) {
     colCount = parseInt(inputVal);
     clampMineCount();
-    applySettingsAndReset(getStoredDifficulty(), false);
+    applySettingsAndResetGame(getStoredDifficulty(), false);
 }
 function onMineInput(inputVal) {
     mineCount = parseInt(inputVal);
-    applySettingsAndReset(getStoredDifficulty(), false);
+    applySettingsAndResetGame(getStoredDifficulty(), false);
 }
 function setSliderValues() {
     clampMineCount();
@@ -126,7 +126,7 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('keyup', (e) => {
     const k = e.key.toLowerCase();
     if (k === ' ' && !isShowingHighScores()) {
-        resetGame();
+        applySettingsAndResetGame(getStoredDifficulty(), false);
     }
     else if (k === 'p') {
         handlePause();
@@ -195,7 +195,7 @@ function getHoveredRowAndColumn() {
 function shouldProcessBoardInput() {
     return !isGamePaused() && !isShowingHighScores() && !isGameLost && !isGameWon && curHoveredCellDataset?.row !== undefined && curHoveredCellDataset?.col !== undefined;
 }
-function applySettingsAndReset(difficulty, didClickDifficulty) {
+function applySettingsAndResetGame(difficulty, didClickDifficulty) {
     setStoredDifficulty(DIFFICULTY_STRING_TO_ENUM_MAP.get(difficulty));
     boardDimensions = DIFFICULTY_TYPE_TO_DIMENSIONS_MAP.get(difficulty);
     if (didClickDifficulty || colCount === undefined || rowCount === undefined || mineCount === undefined) {
@@ -204,9 +204,6 @@ function applySettingsAndReset(difficulty, didClickDifficulty) {
         mineCount = DIFFICULTY_TYPE_TO_MINE_COUNT_MAP.get(difficulty);
     }
     setZoom();
-    resetGame();
-}
-function resetGame() {
     handlePause(true);
     drawTitle();
     clearTimer();
@@ -538,7 +535,9 @@ function handlePause(isResettingGame = false) {
         shouldIncrementTime = false;
     }
     else {
-        boardPlaceholder.replaceWith(boardElementRef);
+        if (boardPlaceholder !== null) {
+            boardPlaceholder.replaceWith(boardElementRef);
+        }
         pauseContainer.style.display = 'none';
         pauseBtn.innerText = '||';
         shouldIncrementTime = true;
