@@ -20,13 +20,12 @@ let hasShownViableMoves = false;
 let shouldIncrementTime = false;
 let timerVal = 0;
 let timerId = 0;
-let isShowingHighScores = false;
 let boardElementRef = null;
 let boardPlaceholder = null;
 let boardParent = null;
 window.onload = () => applySettingsAndReset(getStoredDifficulty() ?? 'medium', false);
 document.addEventListener('click', (event) => {
-    if (!isShowingHighScores) {
+    if (!isShowingHighScores()) {
         return;
     }
     const clickX = event.clientX;
@@ -40,14 +39,14 @@ document.addEventListener('click', (event) => {
     if (clickX >= modalX && clickX <= modalX + modalWidth && clickY >= modalY && clickY <= modalY + modalHeight) {
         return;
     }
-    showOrHideHighScores(false);
+    showOrHideHighScores('close');
 }, true);
 document.getElementById('easy-btn').addEventListener('click', () => applySettingsAndReset('easy', true));
 document.getElementById('medium-btn').addEventListener('click', () => applySettingsAndReset('medium', true));
 document.getElementById('expert-btn').addEventListener('click', () => applySettingsAndReset('expert', true));
 document.getElementById('new-game-btn').addEventListener('click', () => resetGame());
-document.getElementById('high-scores-btn').addEventListener('click', () => showOrHideHighScores(true));
-document.getElementById('close-high-scores-btn').addEventListener('click', () => showOrHideHighScores(false));
+document.getElementById('high-scores-btn').addEventListener('click', () => showOrHideHighScores('open'));
+document.getElementById('close-high-scores-btn').addEventListener('click', () => showOrHideHighScores('close'));
 const pauseBtn = document.getElementById('pause-btn');
 pauseBtn.addEventListener('click', () => handlePause());
 const hintCheckbox = document.getElementById('hint-checkbox');
@@ -126,11 +125,10 @@ document.addEventListener('keydown', (e) => {
 });
 document.addEventListener('keyup', (e) => {
     const k = e.key.toLowerCase();
-    if (k === ' ' && !isShowingHighScores) {
+    if (k === ' ' && !isShowingHighScores()) {
         resetGame();
     }
     else if (k === 'p') {
-        console.log('here');
         handlePause();
     }
     else if (shouldProcessBoardInput() && k === 'f') {
@@ -154,15 +152,16 @@ document.addEventListener('mousedown', (e) => {
     else if (e.button === 2)
         handleCellSecondaryClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
 });
-function showOrHideHighScores(shouldShow) {
-    isShowingHighScores = shouldShow;
-    setStylesOnHighScoresModelAction(shouldShow);
-}
-function setStylesOnHighScoresModelAction(isShowing) {
+function showOrHideHighScores(modalInputAction) {
     const modal = document.getElementById('high-scores-modal');
-    modal.style.display = isShowing ? 'block' : 'none';
-    modal.style.pointerEvents = isShowing ? 'auto' : 'none';
-    if (isShowing) {
+    const shouldShow = !modal.style.display || modal.style.display === 'none';
+    // const shouldShow = modalInputAction === undefined 
+    //     ? modal.style.display === 'block'
+    //     : modalInputAction === 'close' ? false
+    //     : true;
+    modal.style.display = shouldShow ? 'block' : 'none';
+    modal.style.pointerEvents = shouldShow ? 'auto' : 'none';
+    if (shouldShow) {
         for (const difficulty of Object.values(DifficultyType)) {
             const highScore = getHighScore(difficulty);
             document.getElementById(`${difficulty}-high-score`).innerHTML = Number.isNaN(highScore) ? 'never completed' : `${highScore} seconds`;
@@ -174,7 +173,7 @@ function setStylesOnHighScoresModelAction(isShowing) {
             continue;
         }
         const htmlEl = el;
-        if (isShowing) {
+        if (shouldShow) {
             htmlEl.style.opacity = '0.7';
             htmlEl.style.pointerEvents = 'none';
         }
@@ -194,7 +193,7 @@ function getHoveredRowAndColumn() {
     return [parseInt(curHoveredCellDataset.row), parseInt(curHoveredCellDataset.col)];
 }
 function shouldProcessBoardInput() {
-    return !isGamePaused() && !isShowingHighScores && !isGameLost && !isGameWon && curHoveredCellDataset?.row !== undefined && curHoveredCellDataset?.col !== undefined;
+    return !isGamePaused() && !isShowingHighScores() && !isGameLost && !isGameWon && curHoveredCellDataset?.row !== undefined && curHoveredCellDataset?.col !== undefined;
 }
 function applySettingsAndReset(difficulty, didClickDifficulty) {
     setStoredDifficulty(DIFFICULTY_STRING_TO_ENUM_MAP.get(difficulty));
@@ -512,10 +511,15 @@ function startTimer() {
     }, 1000);
 }
 function isGamePaused() {
-    return document.getElementById('game-paused-container').style.display === 'flex';
+    const el = document.getElementById('game-paused-container');
+    return el.style.display && el.style.display !== 'none';
+}
+function isShowingHighScores() {
+    const el = document.getElementById('high-scores-modal');
+    return el.style.display && el.style.display !== 'none';
 }
 function handlePause() {
-    if (isFirstClick) {
+    if (isFirstClick || isGameWon || isGameLost || isShowingHighScores()) {
         return;
     }
     const pauseContainer = document.getElementById('game-paused-container');
@@ -604,7 +608,7 @@ function getCellSurroundingMineCount(r, c, mineCoordKeys) {
     return surroundingMineCount;
 }
 function drawBoard() {
-    let boardContainer = document.getElementById('board-container');
+    let boardContainer = document.getElementById('board-container') ?? boardElementRef;
     boardContainer.innerHTML = '';
     boardContainer.style.setProperty('--cols', String(colCount));
     boardContainer.style.setProperty('--rows', String(rowCount));

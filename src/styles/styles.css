@@ -404,6 +404,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 #pause-btn {
     font-size: 25px;
+    font-weight: 800;
     min-width: 25px;
     max-width: 25px;
     letter-spacing: 3px;

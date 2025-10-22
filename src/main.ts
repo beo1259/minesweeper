@@ -28,8 +28,6 @@ let shouldIncrementTime: boolean = false;
 let timerVal: number = 0;
 let timerId: number = 0;
 
-let isShowingHighScores: boolean = false;
-
 let boardElementRef: HTMLElement | null = null;
 let boardPlaceholder: Comment | null = null;
 let boardParent: Node | null = null;
@@ -37,7 +35,7 @@ let boardParent: Node | null = null;
 window.onload = () => applySettingsAndReset(getStoredDifficulty() ?? 'medium', false);
 
 document.addEventListener('click', (event) => {
-    if (!isShowingHighScores) {
+    if (!isShowingHighScores()) {
         return;
     }
 
@@ -55,7 +53,7 @@ document.addEventListener('click', (event) => {
         return;
     }
 
-    showOrHideHighScores(false);
+    showOrHideHighScores('close');
 }, true);
 
 document.getElementById('easy-btn')!.addEventListener('click', () => applySettingsAndReset('easy', true));
@@ -64,8 +62,8 @@ document.getElementById('expert-btn')!.addEventListener('click', () => applySett
 
 document.getElementById('new-game-btn')!.addEventListener('click', () => resetGame());
 
-document.getElementById('high-scores-btn')!.addEventListener('click', () => showOrHideHighScores(true));
-document.getElementById('close-high-scores-btn')!.addEventListener('click', () => showOrHideHighScores(false));
+document.getElementById('high-scores-btn')!.addEventListener('click', () => showOrHideHighScores('open'));
+document.getElementById('close-high-scores-btn')!.addEventListener('click', () => showOrHideHighScores('close'));
 
 const pauseBtn = document.getElementById('pause-btn')!;
 pauseBtn.addEventListener('click', () => handlePause());
@@ -157,10 +155,9 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('keyup', (e) => {
     const k = e.key.toLowerCase();
 
-    if (k === ' ' && !isShowingHighScores) {
+    if (k === ' ' && !isShowingHighScores()) {
         resetGame();
     } else if (k === 'p') {
-        console.log('here');
         handlePause();
     } else if (shouldProcessBoardInput() && k === 'f') {
         const hoveredRowAndColumn = getHoveredRowAndColumn();
@@ -185,17 +182,18 @@ document.addEventListener('mousedown', (e) => {
     else if (e.button === 2) handleCellSecondaryClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
 });
 
-function showOrHideHighScores(shouldShow: boolean) {
-    isShowingHighScores = shouldShow;
-    setStylesOnHighScoresModelAction(shouldShow);
-}
-
-function setStylesOnHighScoresModelAction(isShowing: boolean) {
+function showOrHideHighScores(modalInputAction: 'close' | 'open') {
     const modal = document.getElementById('high-scores-modal')!;
-    modal.style.display = isShowing ? 'block' : 'none';
-    modal.style.pointerEvents = isShowing ? 'auto' : 'none';
+    const shouldShow = !modal.style.display || modal.style.display === 'none';
+    // const shouldShow = modalInputAction === undefined 
+    //     ? modal.style.display === 'block'
+    //     : modalInputAction === 'close' ? false
+    //     : true;
 
-    if (isShowing) {
+    modal.style.display = shouldShow ? 'block' : 'none';
+    modal.style.pointerEvents = shouldShow ? 'auto' : 'none';
+
+    if (shouldShow) {
         for (const difficulty of Object.values(DifficultyType)) {
             const highScore = getHighScore(difficulty);
             document.getElementById(`${difficulty}-high-score`)!.innerHTML = Number.isNaN(highScore) ? 'never completed' : `${highScore} seconds`
@@ -210,7 +208,7 @@ function setStylesOnHighScoresModelAction(isShowing: boolean) {
 
         const htmlEl = el as HTMLElement;
 
-        if (isShowing) {
+        if (shouldShow) {
             htmlEl.style.opacity = '0.7';
             htmlEl.style.pointerEvents = 'none';
         } else {
@@ -233,7 +231,7 @@ function getHoveredRowAndColumn() {
 }
 
 function shouldProcessBoardInput() {
-    return !isGamePaused() && !isShowingHighScores && !isGameLost && !isGameWon && curHoveredCellDataset?.row !== undefined && curHoveredCellDataset?.col !== undefined;
+    return !isGamePaused() && !isShowingHighScores() && !isGameLost && !isGameWon && curHoveredCellDataset?.row !== undefined && curHoveredCellDataset?.col !== undefined;
 }
 
 function applySettingsAndReset(difficulty: string, didClickDifficulty: boolean) {
@@ -642,11 +640,17 @@ function startTimer() {
 }
 
 function isGamePaused() {
-    return document.getElementById('game-paused-container')!.style.display === 'flex';
+    const el = document.getElementById('game-paused-container')!;
+    return el.style.display && el.style.display !== 'none';
+}
+
+function isShowingHighScores() {
+    const el = document.getElementById('high-scores-modal')!;
+    return el.style.display && el.style.display !== 'none';
 }
 
 function handlePause() {
-    if (isFirstClick) {
+    if (isFirstClick || isGameWon || isGameLost || isShowingHighScores()) {
         return;
     }
 
@@ -762,7 +766,7 @@ function getCellSurroundingMineCount(r: number, c: number, mineCoordKeys: Set<st
 }
 
 function drawBoard(): void {
-    let boardContainer = document.getElementById('board-container')!;
+    let boardContainer = document.getElementById('board-container')! ?? boardElementRef!;
     boardContainer.innerHTML = '';
     boardContainer.style.setProperty('--cols', String(colCount));
     boardContainer.style.setProperty('--rows', String(rowCount));
