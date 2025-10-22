@@ -5,24 +5,30 @@ import { findViableMoves } from './solver.js';
 import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, LOWER_BOUND_BOARD_DIMENSION, DIFFICULTY_STRING_TO_ENUM_MAP, DIFFICULTY_TYPE_TO_DIMENSIONS_MAP, DIFFICULTY_TYPE_TO_MINE_COUNT_MAP } from './utils/constants.js';
 import { clamp, getCoordKey, randArrayEntry } from './utils/utils.js';
 import { DifficultyType } from './models/enums/difficulty-type.js';
+// board state info
 let board = [];
 let previousBoardState = [];
 let boardDimensions = new BoardDimensions(16, 16); // default to medium board
-let isGameLost = false;
-let isGameWon = false;
-let isFirstClick = true;
+// board metadata
 let colCount;
 let rowCount;
 let mineCount;
-let curHoveredCellDataset = null;
-let currentlyXrayedCell = [];
-let hasShownViableMoves = false;
-let shouldIncrementTime = false;
-let timerVal = 0;
-let timerId = 0;
+// board html stuff (for removing/readding the board to the DOM on pause/unpause)
 let boardElementRef = null;
 let boardPlaceholder = null;
 let boardParent = null;
+// game state bools
+let isGameLost = false;
+let isGameWon = false;
+let isFirstClick = true;
+// timer stuff
+let shouldIncrementTime = false;
+let timerVal = 0;
+let timerId = 0;
+// misc
+let curHoveredCellDataset = null;
+let currentlyXrayedCell = [];
+let hasShownViableMoves = false;
 window.onload = () => applySettingsAndResetGame(getStoredDifficulty() ?? 'medium', false);
 document.addEventListener('click', (event) => {
     if (!isShowingHighScores()) {
@@ -408,9 +414,9 @@ function handleContinueGame() {
     }
 }
 function setNewGameStyles() {
+    getBoardContainerElement().style.filter = 'none';
     document.getElementById('game-state-msg').innerHTML = '';
     document.getElementById('continue-btn').style.display = 'none';
-    getBoardContainerElement().style.filter = 'none';
     document.getElementById('continue-btn').style.display = 'none';
     document.getElementById('game-over-container').style.display = 'none';
     setFlagsLeft(mineCount);

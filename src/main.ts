@@ -6,31 +6,35 @@ import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, 
 import { clamp, getCoordKey, randArrayEntry } from './utils/utils.js';
 import { DifficultyType } from './models/enums/difficulty-type.js';
 
+// board state info
 let board: Cell[][] = [];
 let previousBoardState: Cell[][] = [];
 let boardDimensions: BoardDimensions = new BoardDimensions(16, 16); // default to medium board
 
-let isGameLost: boolean = false;
-let isGameWon: boolean = false;
-let isFirstClick: boolean = true;
-
+// board metadata
 let colCount: number | undefined; 
 let rowCount: number | undefined; 
 let mineCount: number | undefined; 
 
-let curHoveredCellDataset: DOMStringMap | null = null;
+// board html stuff (for removing/readding the board to the DOM on pause/unpause)
+let boardElementRef: HTMLElement | null = null;
+let boardPlaceholder: Comment | null = null;
+let boardParent: Node | null = null;
 
-let currentlyXrayedCell: number[] = [];
+// game state bools
+let isGameLost: boolean = false;
+let isGameWon: boolean = false;
+let isFirstClick: boolean = true;
 
-let hasShownViableMoves: boolean = false;
-
+// timer stuff
 let shouldIncrementTime: boolean = false;
 let timerVal: number = 0;
 let timerId: number = 0;
 
-let boardElementRef: HTMLElement | null = null;
-let boardPlaceholder: Comment | null = null;
-let boardParent: Node | null = null;
+// misc
+let curHoveredCellDataset: DOMStringMap | null = null;
+let currentlyXrayedCell: number[] = [];
+let hasShownViableMoves: boolean = false;
 
 window.onload = () => applySettingsAndResetGame(getStoredDifficulty() ?? 'medium', false);
 
@@ -509,14 +513,12 @@ function handleContinueGame() {
 }
 
 function setNewGameStyles() {
+    getBoardContainerElement().style.filter = 'none';
     document.getElementById('game-state-msg')!.innerHTML = '';
     document.getElementById('continue-btn')!.style.display = 'none';
-    getBoardContainerElement().style.filter = 'none';
     document.getElementById('continue-btn')!.style.display = 'none';
     document.getElementById('game-over-container')!.style.display = 'none';
-
     setFlagsLeft(mineCount!);
-
     resetDifficultyTypeUnderlines();
     handleDifficultyUnderline();
 }
@@ -625,7 +627,6 @@ function handleFirstClick(clickedRow: number, clickedCol: number) {
 
     startTimer();
 }
-
 
 function startTimer() {
     shouldIncrementTime = true;
