@@ -235,8 +235,11 @@ function shouldProcessBoardInput() {
 }
 
 function applySettingsAndResetGame(difficulty: string, didClickDifficulty: boolean) {
+    drawTitle();
+
     setStoredDifficulty(DIFFICULTY_STRING_TO_ENUM_MAP.get(difficulty)!);
 
+    // check if we need to redefine the board metadata
     boardDimensions = DIFFICULTY_TYPE_TO_DIMENSIONS_MAP.get(difficulty)!;
     if (didClickDifficulty || colCount === undefined || rowCount === undefined || mineCount === undefined) {
         colCount = boardDimensions.columns;
@@ -244,18 +247,20 @@ function applySettingsAndResetGame(difficulty: string, didClickDifficulty: boole
         mineCount = DIFFICULTY_TYPE_TO_MINE_COUNT_MAP.get(difficulty);
     }
 
+    // misc
     setZoom();
     handlePause(true);
 
-    drawTitle();
-
+    // timer stuff
     clearTimer();
     setTimerVal(0);
 
+    // game state bools
     isGameLost = false;
     isGameWon = false;
     isFirstClick = true;
 
+    // ui stuff
     setSliderValues();
     initEmptyBoard();
     setNewGameStyles();
