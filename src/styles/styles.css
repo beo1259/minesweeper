@@ -418,10 +418,9 @@ input[type="range"]::-webkit-slider-thumb {
 
 #game-paused-container {
     display: none;
-    background-color: transparent;
+    box-shadow: 10px 10px 0 var(--dim-grey), -10px -10px 0 var(--dim-grey);
 }
 #pause-msg {
     color: white;
-    font-size: 50px;
-    text-shadow: 2px 2px 0 black;
+    font-size: 30px;
 }
