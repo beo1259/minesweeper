@@ -48,7 +48,13 @@ document.getElementById('easy-btn').addEventListener('click', () => onDifficulty
 document.getElementById('medium-btn').addEventListener('click', () => onDifficultyClick(DifficultyType.MEDIUM));
 document.getElementById('expert-btn').addEventListener('click', () => onDifficultyClick(DifficultyType.EXPERT));
 document.getElementById('new-game-btn').addEventListener('click', () => applySettingsAndResetGame(getStoredDifficulty(), false));
-document.getElementById('high-scores-btn').addEventListener('click', () => showOrHideModal(highScoresModalEl));
+document.getElementById('high-scores-btn').addEventListener('click', () => {
+    for (const difficulty of Object.values(DifficultyType)) {
+        const highScore = getHighScore(difficulty);
+        document.getElementById(`${difficulty}-high-score`).innerHTML = Number.isNaN(highScore) ? 'never completed' : `${highScore} seconds`;
+    }
+    showOrHideModal(highScoresModalEl);
+});
 document.getElementById('close-high-scores-btn').addEventListener('click', () => showOrHideModal(highScoresModalEl));
 const pauseBtn = document.getElementById('pause-btn');
 pauseBtn.addEventListener('click', () => handlePause());
@@ -170,16 +176,10 @@ function showOrHideModal(modal) {
     const shouldShow = !modal.style.display || modal.style.display === 'none';
     modal.style.display = shouldShow ? 'block' : 'none';
     modal.style.pointerEvents = shouldShow ? 'auto' : 'none';
-    if (shouldShow) {
-        for (const difficulty of Object.values(DifficultyType)) {
-            const highScore = getHighScore(difficulty);
-            document.getElementById(`${difficulty}-high-score`).innerHTML = Number.isNaN(highScore) ? 'never completed' : `${highScore} seconds`;
-        }
-    }
     const allElements = document.getElementsByTagName('*');
     for (const el of allElements) {
         const isModalElement = el === modal || modal.contains(el) || el.contains(modal);
-        const isTooltipElement = el.className === 'tooltip' || el.className === 'tooltip-msg';
+        const isTooltipElement = el.className === 'tooltip-container' || el.className === 'tooltip-msg' || el.className === 'tooltip-trigger';
         const isRootElement = el.tagName === 'BODY' || el.tagName === 'HTML' || el.tagName === 'HEAD';
         if (isModalElement || isTooltipElement || isRootElement) {
             continue;
@@ -244,7 +244,6 @@ function clampMineCount() {
 function setZoom() {
     const maxHeight = getHeightBetweenTopAndBottom() - 60;
     const maxWidth = window.innerWidth - 80;
-    console.log(rowCount(), colCount());
     const cellByHeight = maxHeight / rowCount();
     const cellByWidth = maxWidth / colCount();
     const cell = Math.floor(Math.min(cellByHeight, cellByWidth));
@@ -765,4 +764,7 @@ function drawTitle() {
         spanElements.push(`<span class='title-char' style='${style}'>${title[i]}</span>`);
     }
     el.innerHTML = spanElements.join('');
+}
+function resetHighScores() {
+    Object.values(DifficultyType).forEach(d => localStorage.setItem(`${d}-high-score`, ''));
 }

@@ -437,15 +437,34 @@ input[type="range"]::-webkit-slider-thumb {
     font-size: 30px;
 }
 
-.tooltip {
+.tooltip-container {
     position: relative;
     display: inline-block;
-    border-bottom: 1px dotted black;
-    color: var(--dim-grey);
     align-self: center;
     margin-left: 10px;
     justify-self: center;
 }
+.tooltip-container:hover .tooltip-msg {
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 999;
+}
+
+.tooltip-trigger {
+    color: var(--dim-grey);
+    font-size: 17px;
+    font-weight: 800;
+}
+.tooltip-trigger:hover {
+    color: white;
+    cursor: pointer;
+}
+.tooltip-trigger:hover + .tooltip-msg {
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 999;
+}
+
 .tooltip-msg {
     opacity: 0;
     pointer-events: none;
@@ -456,12 +475,6 @@ input[type="range"]::-webkit-slider-thumb {
     background-color: var(--darkest-grey);
     transition: opacity 0.1s ease-in-out;
     cursor: text;
-}
-.tooltip:hover {
     color: white;
-    cursor: pointer;
-}
-.tooltip:hover .tooltip-msg {
-    opacity: 1;
-    pointer-events: auto;
+    z-index: -1;
 }
