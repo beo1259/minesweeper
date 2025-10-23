@@ -8,9 +8,9 @@ import { GameStateType } from './models/enums/game-state-type.js';
 
 // board state info
 let board: Cell[][];
-let previousBoardState: Cell[][] = [];
+let previousBoardState: Cell[][];
 const rowCount = () => { return rowsInput.value ? parseInt(rowsInput.value) : (board?.length ?? 0) };
-const colCount = () => { return colsInput.value ? parseInt(colsInput.value) : (board[0]?.length ?? 0) };
+const colCount = () => { return colsInput.value ? parseInt(colsInput.value) : (board?.[0]?.length ?? 0) };
 let mineCount: number | undefined; 
 
 // board html stuff (for removing/readding the board to the DOM on pause/unpause)
@@ -31,7 +31,7 @@ let curHoveredCellDataset: DOMStringMap | null = null;
 let currentlyXrayedCell: number[] = [];
 let hasShownViableMoves: boolean = false;
 
-window.onload = () => applySettingsAndResetGame(getStoredDifficulty() ?? DifficultyType.MEDIUM, false);
+window.onload = () => applySettingsAndResetGame(false);
 
 document.addEventListener('click', (event) => {
     if (!isShowingHighScores()) {
@@ -60,7 +60,7 @@ document.getElementById('easy-btn')!.addEventListener('click', () => onDifficult
 document.getElementById('medium-btn')!.addEventListener('click', () => onDifficultyClick(DifficultyType.MEDIUM));
 document.getElementById('expert-btn')!.addEventListener('click', () => onDifficultyClick(DifficultyType.EXPERT));
 
-document.getElementById('new-game-btn')!.addEventListener('click', () => applySettingsAndResetGame(getStoredDifficulty()!, false));
+document.getElementById('new-game-btn')!.addEventListener('click', () => applySettingsAndResetGame(false));
 
 document.getElementById('high-scores-btn')!.addEventListener('click', () => { 
     for (const difficulty of Object.values(DifficultyType)) {
@@ -117,18 +117,19 @@ minesInput.oninput = () => {
 
 function onRowInput() {
     clampMineCount();
-    applySettingsAndResetGame(getStoredDifficulty()!, false)
+    applySettingsAndResetGame(false)
 }
 function onColInput() {
     clampMineCount();
-    applySettingsAndResetGame(getStoredDifficulty()!, false)
+    applySettingsAndResetGame(false)
 }
 function onMineInput(inputVal: string) {
     mineCount = parseInt(inputVal); 
-    applySettingsAndResetGame(getStoredDifficulty()!, false)
+    applySettingsAndResetGame(false)
 }
 
-function setDimensionInputValues(difficulty: DifficultyType, didClickDifficulty: boolean) {
+function setDimensionInputValues(didClickDifficulty: boolean) {
+    const difficulty = getStoredDifficulty()!;
     let cols = 0;
     let rows = 0;
     if (!didClickDifficulty && rowsInput.value && colsInput.value && minesInput.value) {
@@ -174,7 +175,7 @@ document.addEventListener('keyup', (e) => {
     const k = e.key.toLowerCase();
 
     if (k === ' ' && !isShowingHighScores()) {
-        applySettingsAndResetGame(getStoredDifficulty()!, false);
+        applySettingsAndResetGame(false);
     } else if (k === 'p') {
         handlePause();
     } else if (shouldProcessBoardInput() && k === 'f') {
@@ -244,17 +245,14 @@ function shouldProcessBoardInput() {
 }
 
 function onDifficultyClick(difficulty: DifficultyType) {
-    applySettingsAndResetGame(difficulty, true);
+    setStoredDifficulty(difficulty);
+    applySettingsAndResetGame(true);
 }
 
-function applySettingsAndResetGame(difficulty: DifficultyType, didClickDifficulty: boolean) {
-    drawTitle();
-    setStoredDifficulty(difficulty);
-
-    setDimensionInputValues(difficulty, didClickDifficulty);
+function applySettingsAndResetGame(didClickDifficulty: boolean) {
+    drawTitle(); // draw a new title each game
+    setDimensionInputValues(didClickDifficulty);
     setZoom();
-
-    // misc
     handlePause(true);
 
     // timer stuff
