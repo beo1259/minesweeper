@@ -1,4 +1,3 @@
 export enum CellStateType {
-    SAFE,
-    MINE,
+    SAFE, MINE,
 }
