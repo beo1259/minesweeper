@@ -4,9 +4,17 @@
         <main id="main-content">
             <div id="top-bar">
                 <div class="top-bar-block">
-                    <div class="row-container align-self-end">
+                    <div class="row-container align-self-end align-items-center">
                         <p id="viable-moves-txt">enable helper</p>
                         <input type="checkbox" id="hint-checkbox">
+                        <div class="tooltip">
+                            <span class="bold">ⓘ</span>
+                            <div class="tooltip-msg">
+                                With this enabled, cells that have been 100% determined to be mines or safe will be highlighted. All hints shown are logically deducible by looking at the board.
+                                <br><br>
+                                <span class="bold">If this has been enabled during a game, the high score will not be counted. </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -33,16 +41,16 @@
                         <div id="game-info-container" class="row-container">
                             <p id="flags-remaining-txt" class="game-info-txt">
                                 <span><img src='./src/assets/flag_no_bg.svg' class="flag-img"/></span>
-                                <span class="board-bar-txt" id="flags-left"></span>
+                                <span id="flags-left"></span>
                             </p>
 
                             <div class="v-line-break"></div>
 
-                            <p id="time-txt" class="game-info-txt">
-                                <span class="board-bar-txt" id="timer">0s</span>
-                            </p>
+                            <div id="timer-container" class="game-info-txt">
+                                <span id="timer-val">0</span>
+                                <span id="pause-btn">||</span>
+                            </div>
                         </div>
-                        <div id="pause-btn">||</div>
                     </div>
                 </div>
 
@@ -57,19 +65,19 @@
                 <div class="row-container slider-container">
                     <p class="slider-txt">columns</p>
                     <input id="cols-slider" type="range" min="2" max="60">
-                    <input id="cols-input" type="number" class="slider-value-input" value="16"></input>
+                    <input id="cols-input" type="number" class="slider-value-input"></input>
                 </div>
 
                 <div class="row-container slider-container">
                     <p class="slider-txt">rows</p>
-                    <input id="rows-slider" type="range" min="2" max="60" size="2">
-                    <input id="rows-input" type="number" class="slider-value-input" value="16"></input>
+                    <input id="rows-slider" type="range" min="2" max="60">
+                    <input id="rows-input" type="number" class="slider-value-input"></input>
                 </div>
 
                 <div class="row-container slider-container">
                     <p class="slider-txt">mines</p>
-                    <input id="mines-slider" type="range" min="1" max="119" size="3">
-                    <input id="mines-input" type="number" class="slider-value-input" value="16"></input>
+                    <input id="mines-slider" type="range" min="1" max="119">
+                    <input id="mines-input" type="number" class="slider-value-input"></input>
                 </div>
             </div>
 

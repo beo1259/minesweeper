@@ -151,6 +151,7 @@ function handleMineOdds(validStates, frontierCellCoordKeys) {
             safesToHighlight.push([r, c]);
         }
     }
+    console.log(minesToHighlight, safesToHighlight);
     applyStyles(minesToHighlight, safesToHighlight);
 }
 function setCachedMineCoordsUponAnalysis(mineProbabilities, safeProbabilities, frontierCellCoordKeys) {
@@ -272,8 +273,6 @@ function setStartingCellKnowledge(frontierArr, openNumberCellsArr) {
 function getDefaultState(frontierCellCoordKeys, openNumberCells) {
     cacheImmediateMineCoords(frontierCellCoordKeys, openNumberCells);
     return new Map(Array.from(frontierCellCoordKeys).map(key => [key, cachedCellProbabilityMap.get(key) === 1]));
-}
-function cachePatternDerivedMinesAndSafes(frontierCellCoordKeys, openNumberCells) {
 }
 function cacheImmediateMineCoords(frontierCellCoordKeys, openNumberCells) {
     for (const cell of openNumberCells) {

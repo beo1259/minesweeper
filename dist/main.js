@@ -1,35 +1,31 @@
 import { Cell } from './models/cell.js';
 import { CellStateType } from './models/enums/cell-state-type.js';
-import { BoardDimensions } from './models/board-dimensions.js';
 import { findViableMoves } from './solver.js';
-import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, LOWER_BOUND_BOARD_DIMENSION, DIFFICULTY_STRING_TO_ENUM_MAP, DIFFICULTY_TYPE_TO_DIMENSIONS_MAP, DIFFICULTY_TYPE_TO_MINE_COUNT_MAP } from './utils/constants.js';
+import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, LOWER_BOUND_BOARD_DIMENSION, DIFFICULTY_TYPE_TO_DIMENSIONS_MAP, DIFFICULTY_TYPE_TO_MINE_COUNT_MAP } from './utils/constants.js';
 import { clamp, getCoordKey, randArrayEntry } from './utils/utils.js';
 import { DifficultyType } from './models/enums/difficulty-type.js';
+import { GameStateType } from './models/enums/game-state-type.js';
 // board state info
-let board = [];
+let board;
 let previousBoardState = [];
-let boardDimensions = new BoardDimensions(16, 16); // default to medium board
-// board metadata
-let colCount;
-let rowCount;
+const rowCount = () => { return rowsInput.value ? parseInt(rowsInput.value) : (board?.length ?? 0); };
+const colCount = () => { return colsInput.value ? parseInt(colsInput.value) : (board[0]?.length ?? 0); };
 let mineCount;
 // board html stuff (for removing/readding the board to the DOM on pause/unpause)
 let boardElementRef = null;
 let boardPlaceholder = null;
 let boardParent = null;
 // game state bools
-let isGameLost = false;
-let isGameWon = false;
-let isFirstClick = true;
+let gameState = GameStateType.PLAYING;
+let isBoardClean = true;
 // timer stuff
 let shouldIncrementTime = false;
-let timerVal = 0;
 let timerId = 0;
 // misc
 let curHoveredCellDataset = null;
 let currentlyXrayedCell = [];
 let hasShownViableMoves = false;
-window.onload = () => applySettingsAndResetGame(getStoredDifficulty() ?? 'medium', false);
+window.onload = () => applySettingsAndResetGame(getStoredDifficulty() ?? DifficultyType.MEDIUM, false);
 document.addEventListener('click', (event) => {
     if (!isShowingHighScores()) {
         return;
@@ -45,40 +41,41 @@ document.addEventListener('click', (event) => {
     if (clickX >= modalX && clickX <= modalX + modalWidth && clickY >= modalY && clickY <= modalY + modalHeight) {
         return;
     }
-    showOrHideHighScores('close');
+    showOrHideModal(highScoresModalEl);
 }, true);
-document.getElementById('easy-btn').addEventListener('click', () => applySettingsAndResetGame('easy', true));
-document.getElementById('medium-btn').addEventListener('click', () => applySettingsAndResetGame('medium', true));
-document.getElementById('expert-btn').addEventListener('click', () => applySettingsAndResetGame('expert', true));
+const highScoresModalEl = document.getElementById('high-scores-modal');
+document.getElementById('easy-btn').addEventListener('click', () => onDifficultyClick(DifficultyType.EASY));
+document.getElementById('medium-btn').addEventListener('click', () => onDifficultyClick(DifficultyType.MEDIUM));
+document.getElementById('expert-btn').addEventListener('click', () => onDifficultyClick(DifficultyType.EXPERT));
 document.getElementById('new-game-btn').addEventListener('click', () => applySettingsAndResetGame(getStoredDifficulty(), false));
-document.getElementById('high-scores-btn').addEventListener('click', () => showOrHideHighScores('open'));
-document.getElementById('close-high-scores-btn').addEventListener('click', () => showOrHideHighScores('close'));
+document.getElementById('high-scores-btn').addEventListener('click', () => showOrHideModal(highScoresModalEl));
+document.getElementById('close-high-scores-btn').addEventListener('click', () => showOrHideModal(highScoresModalEl));
 const pauseBtn = document.getElementById('pause-btn');
 pauseBtn.addEventListener('click', () => handlePause());
 const hintCheckbox = document.getElementById('hint-checkbox');
 hintCheckbox.addEventListener('click', () => {
-    checkIfShouldShowViableMoves(isFirstClick);
+    checkIfShouldShowViableMoves(isBoardClean);
 });
 document.getElementById('continue-btn').addEventListener('click', () => handleContinueGame());
 const colsSlider = document.getElementById('cols-slider');
 colsSlider.oninput = () => {
     colsInput.value = colsSlider.value;
-    onColInput(colsSlider.value);
+    onColInput();
 };
 const colsInput = document.getElementById('cols-input');
 colsInput.oninput = () => {
     colsInput.value = clamp(parseInt(colsInput.value), parseInt(colsSlider.min), parseInt(colsSlider.max)).toString();
-    onColInput(colsInput.value);
+    onColInput();
 };
 const rowsSlider = document.getElementById('rows-slider');
 rowsSlider.oninput = () => {
     rowsInput.value = rowsSlider.value;
-    onRowInput(rowsSlider.value);
+    onRowInput();
 };
 const rowsInput = document.getElementById('rows-input');
 rowsInput.oninput = () => {
     rowsInput.value = clamp(parseInt(rowsInput.value), parseInt(rowsSlider.min), parseInt(rowsSlider.max)).toString();
-    onRowInput(rowsInput.value);
+    onRowInput();
 };
 const minesSlider = document.getElementById('mines-slider');
 minesSlider.oninput = () => {
@@ -90,13 +87,11 @@ minesInput.oninput = () => {
     minesInput.value = clamp(parseInt(minesInput.value), parseInt(minesSlider.min), Math.min(parseInt(minesSlider.max), getMaxMineCount())).toString();
     onMineInput(minesInput.value);
 };
-function onRowInput(inputVal) {
-    rowCount = parseInt(inputVal);
+function onRowInput() {
     clampMineCount();
     applySettingsAndResetGame(getStoredDifficulty(), false);
 }
-function onColInput(inputVal) {
-    colCount = parseInt(inputVal);
+function onColInput() {
     clampMineCount();
     applySettingsAndResetGame(getStoredDifficulty(), false);
 }
@@ -104,16 +99,28 @@ function onMineInput(inputVal) {
     mineCount = parseInt(inputVal);
     applySettingsAndResetGame(getStoredDifficulty(), false);
 }
-function setSliderValues() {
-    clampMineCount();
-    const colCountStr = colCount.toString();
+function setDimensionInputValues(difficulty, didClickDifficulty) {
+    let cols = 0;
+    let rows = 0;
+    if (!didClickDifficulty && rowsInput.value && colsInput.value && minesInput.value) {
+        rows = parseInt(rowsInput.value);
+        cols = parseInt(colsInput.value);
+        mineCount = parseInt(minesInput.value);
+    }
+    else {
+        const dims = DIFFICULTY_TYPE_TO_DIMENSIONS_MAP.get(difficulty);
+        rows = dims.rows;
+        cols = dims.columns;
+        mineCount = DIFFICULTY_TYPE_TO_MINE_COUNT_MAP.get(difficulty);
+    }
+    const colCountStr = cols.toString();
     colsSlider.value = colCountStr;
-    colsInput.value = clamp(colCount, parseInt(colsSlider.min), parseInt(colsSlider.max)).toString();
-    const rowCountStr = rowCount.toString();
+    colsInput.value = clamp(cols, parseInt(colsSlider.min), parseInt(colsSlider.max)).toString();
+    const rowCountStr = rows.toString();
     rowsSlider.value = rowCountStr;
-    rowsInput.value = clamp(rowCount, parseInt(rowsSlider.min), parseInt(rowsSlider.max)).toString();
-    const mineCountStr = mineCount.toString();
-    minesSlider.value = mineCountStr;
+    rowsInput.value = clamp(rows, parseInt(rowsSlider.min), parseInt(rowsSlider.max)).toString();
+    clampMineCount();
+    minesSlider.value = mineCount.toString();
     const maxMineCount = getMaxMineCount();
     const mineCountUpperBound = Number.isNaN(maxMineCount) ? 999 : maxMineCount;
     minesInput.value = clamp(mineCount, parseInt(minesSlider.min), Math.min(parseInt(minesSlider.max), mineCountUpperBound)).toString();
@@ -138,6 +145,7 @@ document.addEventListener('keyup', (e) => {
         handlePause();
     }
     else if (shouldProcessBoardInput() && k === 'f') {
+        hintCheckbox.blur();
         const hoveredRowAndColumn = getHoveredRowAndColumn();
         processCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
     }
@@ -158,13 +166,8 @@ document.addEventListener('mousedown', (e) => {
     else if (e.button === 2)
         handleCellSecondaryClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
 });
-function showOrHideHighScores(modalInputAction) {
-    const modal = document.getElementById('high-scores-modal');
+function showOrHideModal(modal) {
     const shouldShow = !modal.style.display || modal.style.display === 'none';
-    // const shouldShow = modalInputAction === undefined 
-    //     ? modal.style.display === 'block'
-    //     : modalInputAction === 'close' ? false
-    //     : true;
     modal.style.display = shouldShow ? 'block' : 'none';
     modal.style.pointerEvents = shouldShow ? 'auto' : 'none';
     if (shouldShow) {
@@ -175,7 +178,10 @@ function showOrHideHighScores(modalInputAction) {
     }
     const allElements = document.getElementsByTagName('*');
     for (const el of allElements) {
-        if (el === modal || modal.contains(el) || el.contains(modal) || el.tagName === 'BODY' || el.tagName === 'HTML' || el.tagName === 'HEAD') {
+        const isModalElement = el === modal || modal.contains(el) || el.contains(modal);
+        const isTooltipElement = el.className === 'tooltip' || el.className === 'tooltip-msg';
+        const isRootElement = el.tagName === 'BODY' || el.tagName === 'HTML' || el.tagName === 'HEAD';
+        if (isModalElement || isTooltipElement || isRootElement) {
             continue;
         }
         const htmlEl = el;
@@ -190,39 +196,33 @@ function showOrHideHighScores(modalInputAction) {
     }
 }
 function processCellMainClick(r, c) {
-    const wasFirstClick = isFirstClick;
+    const wasFirstClick = isBoardClean;
     handleCellMainClick(r, c);
-    const cell = board[r][c];
     checkIfShouldShowViableMoves(wasFirstClick);
 }
 function getHoveredRowAndColumn() {
     return [parseInt(curHoveredCellDataset.row), parseInt(curHoveredCellDataset.col)];
 }
 function shouldProcessBoardInput() {
-    return !isGamePaused() && !isShowingHighScores() && !isGameLost && !isGameWon && curHoveredCellDataset?.row !== undefined && curHoveredCellDataset?.col !== undefined;
+    return !isGamePaused() && !isShowingHighScores() && gameState === GameStateType.PLAYING && curHoveredCellDataset?.row !== undefined && curHoveredCellDataset?.col !== undefined;
+}
+function onDifficultyClick(difficulty) {
+    applySettingsAndResetGame(difficulty, true);
 }
 function applySettingsAndResetGame(difficulty, didClickDifficulty) {
     drawTitle();
-    setStoredDifficulty(DIFFICULTY_STRING_TO_ENUM_MAP.get(difficulty));
-    // check if we need to redefine the board metadata
-    boardDimensions = DIFFICULTY_TYPE_TO_DIMENSIONS_MAP.get(difficulty);
-    if (didClickDifficulty || colCount === undefined || rowCount === undefined || mineCount === undefined) {
-        colCount = boardDimensions.columns;
-        rowCount = boardDimensions.rows;
-        mineCount = DIFFICULTY_TYPE_TO_MINE_COUNT_MAP.get(difficulty);
-    }
-    // misc
+    setStoredDifficulty(difficulty);
+    setDimensionInputValues(difficulty, didClickDifficulty);
     setZoom();
+    // misc
     handlePause(true);
     // timer stuff
     clearTimer();
     setTimerVal(0);
     // game state bools
-    isGameLost = false;
-    isGameWon = false;
-    isFirstClick = true;
+    gameState = GameStateType.PLAYING;
+    isBoardClean = true;
     // ui stuff
-    setSliderValues();
     initEmptyBoard();
     setNewGameStyles();
     if (hintCheckbox.checked) {
@@ -230,8 +230,8 @@ function applySettingsAndResetGame(difficulty, didClickDifficulty) {
     }
 }
 function getMaxMineCount() {
-    let safeRowCount = Number.isNaN(rowCount) ? LOWER_BOUND_BOARD_DIMENSION : rowCount;
-    let safeColCount = Number.isNaN(colCount) ? LOWER_BOUND_BOARD_DIMENSION : colCount;
+    let safeRowCount = Number.isNaN(rowCount()) ? LOWER_BOUND_BOARD_DIMENSION : rowCount();
+    let safeColCount = Number.isNaN(colCount()) ? LOWER_BOUND_BOARD_DIMENSION : colCount();
     return safeRowCount * safeColCount - 1;
 }
 function clampMineCount() {
@@ -244,8 +244,9 @@ function clampMineCount() {
 function setZoom() {
     const maxHeight = getHeightBetweenTopAndBottom() - 60;
     const maxWidth = window.innerWidth - 80;
-    const cellByHeight = maxHeight / rowCount;
-    const cellByWidth = maxWidth / colCount;
+    console.log(rowCount(), colCount());
+    const cellByHeight = maxHeight / rowCount();
+    const cellByWidth = maxWidth / colCount();
     const cell = Math.floor(Math.min(cellByHeight, cellByWidth));
     document.documentElement.style.setProperty('--cell', `${cell}px`);
 }
@@ -265,9 +266,11 @@ function resetDifficultyTypeUnderlines() {
 }
 function initEmptyBoard() {
     board = [];
-    for (let r = 0; r < rowCount; r++) {
+    const rows = rowCount();
+    const cols = colCount();
+    for (let r = 0; r < rows; r++) {
         board[r] = [];
-        for (let c = 0; c < colCount; c++) {
+        for (let c = 0; c < cols; c++) {
             board[r][c] = new Cell(r, c, 0, CellStateType.SAFE, false, false);
         }
     }
@@ -327,7 +330,7 @@ function handleCellMainClick(r, c) {
     if (cell.isFlagged) {
         return;
     }
-    if (isFirstClick) {
+    if (isBoardClean) {
         handleFirstClick(r, c);
         if (checkIfGameWon()) { // game is won immediately if only one safe cell in board
             return;
@@ -367,11 +370,10 @@ function checkIfGameLost(openedCell) {
         return false;
     }
     shouldIncrementTime = false;
-    isGameLost = true;
+    gameState = GameStateType.LOST;
     document.getElementById('game-state-msg').innerHTML = 'you lost;&nbsp;';
     document.getElementById('game-state-msg').className = 'txt lose-msg';
     document.getElementById('continue-btn').style.display = 'block';
-    //document.getElementById('board-container')!.style.filter = 'blur(1px)';
     document.getElementById('game-over-container').style.display = 'flex';
     document.getElementById('game-over-container').style.boxShadow = '10px 10px 0 red, -10px -10px 0 red';
     showMineLocations();
@@ -382,23 +384,25 @@ function checkIfGameWon() {
         return false;
     }
     shouldIncrementTime = false;
-    isGameWon = true;
-    document.getElementById('game-state-msg').innerHTML = handleNewHighScore() ? `you won! new highscore ${timerVal} seconds!` : 'you won!';
+    gameState = GameStateType.WON;
+    document.getElementById('game-state-msg').innerHTML = handleNewHighScore() ? `you won! new highscore ${getTimerVal()} seconds!` : 'you won!';
     document.getElementById('game-state-msg').className = 'txt win-msg';
-    //document.getElementById('board-container')!.style.filter = 'blur(1px)';
     document.getElementById('game-over-container').style.display = 'flex';
     document.getElementById('game-over-container').style.boxShadow = '10px 10px 0 gold, -10px -10px 0 gold';
     showMineLocations();
     return true;
 }
 function handleNewHighScore() {
+    if (hasShownViableMoves) {
+        return;
+    }
     const difficulty = getNativeDifficultyByDimensions();
     if (difficulty === undefined) {
         return false;
     }
     const currentHighScore = getHighScore(difficulty);
-    if (Number.isNaN(currentHighScore) || timerVal < currentHighScore) {
-        setHighScore(difficulty, timerVal);
+    if (Number.isNaN(currentHighScore) || getTimerVal() < currentHighScore) {
+        setHighScore(difficulty, getTimerVal());
         return true;
     }
     return false;
@@ -407,7 +411,7 @@ function handleContinueGame() {
     shouldIncrementTime = true;
     board = previousBoardState;
     drawBoard();
-    isGameLost = false;
+    gameState = GameStateType.PLAYING;
     setNewGameStyles();
     if (hintCheckbox.checked) {
         findViableMoves(board, false);
@@ -431,9 +435,9 @@ function handleDifficultyUnderline() {
     }
 }
 function getNativeDifficultyByDimensions() {
-    const difficultyStr = Array.from(DIFFICULTY_TYPE_TO_DIMENSIONS_MAP).find(val => val[1].rows === rowCount && val[1].columns === colCount);
+    const difficultyStr = Array.from(DIFFICULTY_TYPE_TO_DIMENSIONS_MAP).find(val => val[1].rows === rowCount() && val[1].columns === colCount());
     if (difficultyStr !== undefined) {
-        const difficultyType = DIFFICULTY_STRING_TO_ENUM_MAP.get(difficultyStr[0]);
+        const difficultyType = difficultyStr[0];
         if (DIFFICULTY_TYPE_TO_MINE_COUNT_MAP.get(difficultyType) === mineCount) {
             return difficultyType;
         }
@@ -505,13 +509,14 @@ function floodAndFill(r, c) {
 }
 function handleFirstClick(clickedRow, clickedCol) {
     initBoardOnFirstClick(clickedRow, clickedCol);
-    isFirstClick = false;
+    isBoardClean = false;
     startTimer();
 }
 function startTimer() {
     shouldIncrementTime = true;
-    timerVal = 0;
+    setTimerVal(0);
     timerId = setInterval(() => {
+        let timerVal = getTimerVal();
         if (shouldIncrementTime) {
             timerVal++;
         }
@@ -523,14 +528,13 @@ function isGamePaused() {
     return el.style.display && el.style.display !== 'none';
 }
 function isShowingHighScores() {
-    const el = document.getElementById('high-scores-modal');
-    return el.style.display && el.style.display !== 'none';
+    return highScoresModalEl.style.display && highScoresModalEl.style.display !== 'none';
 }
 function getBoardContainerElement() {
     return document.getElementById('board-container') ?? boardElementRef;
 }
 function handlePause(isResettingGame = false) {
-    if (isFirstClick || isGameWon || isGameLost || isShowingHighScores()) {
+    if (gameState !== GameStateType.PLAYING || isShowingHighScores()) {
         return;
     }
     const pauseContainer = document.getElementById('game-paused-container');
@@ -554,30 +558,28 @@ function handlePause(isResettingGame = false) {
         shouldIncrementTime = true;
     }
 }
+function getTimerVal() {
+    return parseInt(document.getElementById('timer-val').innerText);
+}
 function setTimerVal(value) {
-    timerVal = value;
-    // const minuteVal = Math.floor(timerVal / 60);
-    // const secondVal = (timerVal % 60).toString().padStart(2, '0');
-    //document.getElementById('timer')!.innerHTML = `${minuteVal.toString()}:${secondVal.toString()}`;
-    document.getElementById('timer').innerHTML = timerVal.toString();
+    document.getElementById('timer-val').innerHTML = value.toString();
 }
 function clearTimer() {
     clearInterval(timerId);
     shouldIncrementTime = false;
 }
 function initBoardOnFirstClick(firstClickRow, firstClickCol) {
-    // board = JSON.parse(SAMPLE_BOARD);
-    // drawBoard();
-    // return;
     const firstClickNeighbours = getNeighbours(firstClickRow, firstClickCol).map(n => getCoordKey(n.r, n.c));
-    const maxPossibleSafeSquares = Math.min(1 + firstClickNeighbours.length, (rowCount * colCount) - mineCount);
+    const maxPossibleSafeSquares = Math.min(1 + firstClickNeighbours.length, (rowCount() * colCount()) - mineCount);
     const safeSquaresOnInit = new Set([
         getCoordKey(firstClickRow, firstClickCol),
         ...firstClickNeighbours
     ].slice(0, maxPossibleSafeSquares));
     const mineCoordKeys = generateMineCoordinatesOnInit(safeSquaresOnInit);
-    for (let r = 0; r < rowCount; r++) {
-        for (let c = 0; c < colCount; c++) {
+    const rows = rowCount();
+    const cols = colCount();
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
             const isMine = mineCoordKeys.has(getCoordKey(r, c));
             if (isMine) {
                 board[r][c] = new Cell(r, c, null, CellStateType.MINE, false, false);
@@ -596,14 +598,16 @@ function initBoardOnFirstClick(firstClickRow, firstClickCol) {
 function generateMineCoordinatesOnInit(exemptCoords) {
     const isExempt = (coordKey) => exemptCoords.has(coordKey);
     const getRandomCoord = (coordUpperBound) => Math.floor(Math.random() * coordUpperBound);
+    const rows = rowCount();
+    const cols = colCount();
     const mines = new Set();
     for (let i = 0; i < mineCount; i++) {
-        let r = getRandomCoord(rowCount);
-        let c = getRandomCoord(colCount);
+        let r = getRandomCoord(rows);
+        let c = getRandomCoord(cols);
         let coordKey = getCoordKey(r, c);
         while (isExempt(coordKey) || mines.has(coordKey)) {
-            r = getRandomCoord(rowCount);
-            c = getRandomCoord(colCount);
+            r = getRandomCoord(rows);
+            c = getRandomCoord(cols);
             coordKey = getCoordKey(r, c);
         }
         mines.add(coordKey);
@@ -621,13 +625,15 @@ function getCellSurroundingMineCount(r, c, mineCoordKeys) {
     return surroundingMineCount;
 }
 function drawBoard() {
+    const rows = rowCount();
+    const cols = colCount();
     let boardContainer = getBoardContainerElement();
     boardContainer.innerHTML = '';
-    boardContainer.style.setProperty('--cols', String(colCount));
-    boardContainer.style.setProperty('--rows', String(rowCount));
+    boardContainer.style.setProperty('--cols', String(colCount()));
+    boardContainer.style.setProperty('--rows', String(rowCount()));
     boardContainer.addEventListener('contextmenu', (e) => e.preventDefault());
-    for (let r = 0; r < rowCount; r++) {
-        for (let c = 0; c < colCount; c++) {
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
             var elem = document.createElement('div');
             boardContainer.appendChild(elem);
             elem.id = `cell_${r}_${c}`;
@@ -640,7 +646,7 @@ function drawBoard() {
     }
 }
 function getStoredDifficulty() {
-    return localStorage.getItem('difficulty');
+    return localStorage.getItem('difficulty') ?? undefined;
 }
 function setStoredDifficulty(difficulty) {
     localStorage.setItem('difficulty', difficulty);
@@ -655,8 +661,8 @@ function getNeighbours(r, c) {
     for (let dir of directions) {
         const targetRow = r + dir[0];
         const targetCol = c + dir[1];
-        if (targetRow < 0 || targetRow > rowCount - 1
-            || targetCol < 0 || targetCol > colCount - 1) {
+        if (targetRow < 0 || targetRow > rowCount() - 1
+            || targetCol < 0 || targetCol > colCount() - 1) {
             continue;
         }
         neighbours.push(board[targetRow][targetCol]);
@@ -747,19 +753,14 @@ function drawTitle() {
         '153, 153, 153',
         '209, 216, 223',
     ];
-    //const colorPickProbability: [string, number][] = colors.map(c => [c, 1]);
     const usedColors = [];
     for (let i = 0; i < title.length; i++) {
-        //const randColor = randArrayEntryWithProbability(colorPickProbability);
         const randColor = randArrayEntry(colors);
         let colorToUse = randColor;
         while (i !== 0 && usedColors[usedColors.length - 1] === colorToUse) {
             colorToUse = randArrayEntry(colors);
         }
         usedColors.push(colorToUse);
-        // const arrEntry = colorPickProbability.find(c => c[0] === colorToUse)!;
-        // console.log(arrEntry);
-        // arrEntry[1] = Math.max(0, arrEntry[1] - 0.33);
         const style = `color: rgb(${colorToUse});`;
         spanElements.push(`<span class='title-char' style='${style}'>${title[i]}</span>`);
     }
