@@ -5,11 +5,12 @@ import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, 
 import { clamp, getCoordKey, randArrayEntry } from './utils/utils.js';
 import { DifficultyType } from './models/enums/difficulty-type.js';
 import { GameStateType } from './models/enums/game-state-type.js';
+import { el_closeHighScoresBtn, el_continueBtn, el_highScoresBtn, el_newGameBtn, el_pauseBtn, el_hintCheckbox, el_colSlider, el_colInput, el_rowSlider, el_rowInput, el_mineSlider, el_mineInput, el_bottomBar, el_gameStateMsg, el_gameOverContainer, el_topBar, el_flagsLeft, el_gamePausedContainer, el_boardContainer, el_timerVal, el_title, el_highScoresModal, el_difficultyBtn, el_cell, el_difficultyHighScore } from './html_elements.js';
 // board state info
 let board;
 let previousBoardState;
-const rowCount = () => { return rowsInput.value ? parseInt(rowsInput.value) : (board?.length ?? 0); };
-const colCount = () => { return colsInput.value ? parseInt(colsInput.value) : (board?.[0]?.length ?? 0); };
+const rowCount = () => { return el_rowInput.value ? parseInt(el_rowInput.value) : (board?.length ?? 0); };
+const colCount = () => { return el_colInput.value ? parseInt(el_colInput.value) : (board?.[0]?.length ?? 0); };
 let mineCount;
 // board html stuff (for removing/readding the board to the DOM on pause/unpause)
 let boardElementRef = null;
@@ -32,7 +33,7 @@ document.addEventListener('click', (event) => {
     }
     const clickX = event.clientX;
     const clickY = event.clientY;
-    const highScoreModal = document.getElementById('high-scores-modal');
+    const highScoreModal = el_highScoresModal;
     const rect = highScoreModal.getBoundingClientRect();
     const modalX = rect.x;
     const modalY = rect.y;
@@ -41,57 +42,48 @@ document.addEventListener('click', (event) => {
     if (clickX >= modalX && clickX <= modalX + modalWidth && clickY >= modalY && clickY <= modalY + modalHeight) {
         return;
     }
-    showOrHideModal(highScoresModalEl);
+    showOrHideModal(el_highScoresModal);
 }, true);
-const highScoresModalEl = document.getElementById('high-scores-modal');
-document.getElementById('easy-btn').addEventListener('click', () => onDifficultyClick(DifficultyType.EASY));
-document.getElementById('medium-btn').addEventListener('click', () => onDifficultyClick(DifficultyType.MEDIUM));
-document.getElementById('expert-btn').addEventListener('click', () => onDifficultyClick(DifficultyType.EXPERT));
-document.getElementById('new-game-btn').addEventListener('click', () => applySettingsAndResetGame(false));
-document.getElementById('high-scores-btn').addEventListener('click', () => {
+el_difficultyBtn(DifficultyType.EASY).addEventListener('click', () => onDifficultyClick(DifficultyType.EASY));
+el_difficultyBtn(DifficultyType.MEDIUM).addEventListener('click', () => onDifficultyClick(DifficultyType.MEDIUM));
+el_difficultyBtn(DifficultyType.EXPERT).addEventListener('click', () => onDifficultyClick(DifficultyType.EXPERT));
+el_newGameBtn.addEventListener('click', () => applySettingsAndResetGame(false));
+el_highScoresBtn.addEventListener('click', () => {
     for (const difficulty of Object.values(DifficultyType)) {
         const highScore = getHighScore(difficulty);
-        document.getElementById(`${difficulty}-high-score`).innerHTML = Number.isNaN(highScore) ? 'never completed' : `${highScore} seconds`;
+        el_difficultyHighScore(difficulty).innerHTML = Number.isNaN(highScore) ? 'never completed' : `${highScore} seconds`;
     }
-    showOrHideModal(highScoresModalEl);
+    showOrHideModal(el_highScoresModal);
 });
-document.getElementById('close-high-scores-btn').addEventListener('click', () => showOrHideModal(highScoresModalEl));
-const pauseBtn = document.getElementById('pause-btn');
-pauseBtn.addEventListener('click', () => handlePause());
-const hintCheckbox = document.getElementById('hint-checkbox');
-hintCheckbox.addEventListener('click', () => {
+el_closeHighScoresBtn.addEventListener('click', () => showOrHideModal(el_highScoresModal));
+el_pauseBtn.addEventListener('click', () => handlePause());
+el_hintCheckbox.addEventListener('click', () => {
     checkIfShouldShowViableMoves(isBoardClean);
 });
-document.getElementById('continue-btn').addEventListener('click', () => handleContinueGame());
-const colsSlider = document.getElementById('cols-slider');
-colsSlider.oninput = () => {
-    colsInput.value = colsSlider.value;
+el_continueBtn.addEventListener('click', () => handleContinueGame());
+el_colSlider.oninput = () => {
+    el_colInput.value = el_colSlider.value;
     onColInput();
 };
-const colsInput = document.getElementById('cols-input');
-colsInput.oninput = () => {
-    colsInput.value = clamp(parseInt(colsInput.value), parseInt(colsSlider.min), parseInt(colsSlider.max)).toString();
+el_colInput.oninput = () => {
+    el_colInput.value = clamp(parseInt(el_colInput.value), parseInt(el_colSlider.min), parseInt(el_colSlider.max)).toString();
     onColInput();
 };
-const rowsSlider = document.getElementById('rows-slider');
-rowsSlider.oninput = () => {
-    rowsInput.value = rowsSlider.value;
+el_rowSlider.oninput = () => {
+    el_rowInput.value = el_rowSlider.value;
     onRowInput();
 };
-const rowsInput = document.getElementById('rows-input');
-rowsInput.oninput = () => {
-    rowsInput.value = clamp(parseInt(rowsInput.value), parseInt(rowsSlider.min), parseInt(rowsSlider.max)).toString();
+el_rowInput.oninput = () => {
+    el_rowInput.value = clamp(parseInt(el_rowInput.value), parseInt(el_rowSlider.min), parseInt(el_rowSlider.max)).toString();
     onRowInput();
 };
-const minesSlider = document.getElementById('mines-slider');
-minesSlider.oninput = () => {
-    minesInput.value = minesSlider.value;
-    onMineInput(minesSlider.value);
+el_mineSlider.oninput = () => {
+    el_mineInput.value = el_mineSlider.value;
+    onMineInput(el_mineSlider.value);
 };
-const minesInput = document.getElementById('mines-input');
-minesInput.oninput = () => {
-    minesInput.value = clamp(parseInt(minesInput.value), parseInt(minesSlider.min), Math.min(parseInt(minesSlider.max), getMaxMineCount())).toString();
-    onMineInput(minesInput.value);
+el_mineInput.oninput = () => {
+    el_mineInput.value = clamp(parseInt(el_mineInput.value), parseInt(el_mineSlider.min), Math.min(parseInt(el_mineSlider.max), getMaxMineCount())).toString();
+    onMineInput(el_mineInput.value);
 };
 function onRowInput() {
     clampMineCount();
@@ -109,10 +101,10 @@ function setDimensionInputValues(didClickDifficulty) {
     const difficulty = getStoredDifficulty();
     let cols = 0;
     let rows = 0;
-    if (!didClickDifficulty && rowsInput.value && colsInput.value && minesInput.value) {
-        rows = parseInt(rowsInput.value);
-        cols = parseInt(colsInput.value);
-        mineCount = parseInt(minesInput.value);
+    if (!didClickDifficulty && el_rowInput.value && el_colInput.value && el_mineInput.value) {
+        rows = parseInt(el_rowInput.value);
+        cols = parseInt(el_colInput.value);
+        mineCount = parseInt(el_mineInput.value);
     }
     else {
         const dims = DIFFICULTY_TYPE_TO_DIMENSIONS_MAP.get(difficulty);
@@ -121,16 +113,16 @@ function setDimensionInputValues(didClickDifficulty) {
         mineCount = DIFFICULTY_TYPE_TO_MINE_COUNT_MAP.get(difficulty);
     }
     const colCountStr = cols.toString();
-    colsSlider.value = colCountStr;
-    colsInput.value = clamp(cols, parseInt(colsSlider.min), parseInt(colsSlider.max)).toString();
+    el_colSlider.value = colCountStr;
+    el_colInput.value = clamp(cols, parseInt(el_colSlider.min), parseInt(el_colSlider.max)).toString();
     const rowCountStr = rows.toString();
-    rowsSlider.value = rowCountStr;
-    rowsInput.value = clamp(rows, parseInt(rowsSlider.min), parseInt(rowsSlider.max)).toString();
+    el_rowSlider.value = rowCountStr;
+    el_rowInput.value = clamp(rows, parseInt(el_rowSlider.min), parseInt(el_rowSlider.max)).toString();
     clampMineCount();
-    minesSlider.value = mineCount.toString();
+    el_mineSlider.value = mineCount.toString();
     const maxMineCount = getMaxMineCount();
     const mineCountUpperBound = Number.isNaN(maxMineCount) ? 999 : maxMineCount;
-    minesInput.value = clamp(mineCount, parseInt(minesSlider.min), Math.min(parseInt(minesSlider.max), mineCountUpperBound)).toString();
+    el_mineInput.value = clamp(mineCount, parseInt(el_mineSlider.min), Math.min(parseInt(el_mineSlider.max), mineCountUpperBound)).toString();
 }
 window.addEventListener('resize', () => setZoom());
 document.addEventListener('keydown', (e) => {
@@ -152,7 +144,7 @@ document.addEventListener('keyup', (e) => {
         handlePause();
     }
     else if (shouldProcessBoardInput() && k === 'f') {
-        hintCheckbox.blur();
+        el_hintCheckbox.blur();
         const hoveredRowAndColumn = getHoveredRowAndColumn();
         processCellMainClick(hoveredRowAndColumn[0], hoveredRowAndColumn[1]);
     }
@@ -224,8 +216,8 @@ function applySettingsAndResetGame(didClickDifficulty) {
     isBoardClean = true;
     // ui stuff
     initEmptyBoard();
-    setNewGameStyles();
-    if (hintCheckbox.checked) {
+    setNewGameStyles(false);
+    if (el_hintCheckbox.checked) {
         findViableMoves(board, true);
     }
 }
@@ -236,10 +228,10 @@ function getMaxMineCount() {
 }
 function clampMineCount() {
     const maxMineCount = getMaxMineCount();
-    minesSlider.max = maxMineCount.toString();
+    el_mineSlider.max = maxMineCount.toString();
     mineCount = clamp(mineCount, 1, maxMineCount);
-    minesSlider.value = mineCount.toString();
-    minesInput.value = mineCount.toString();
+    el_mineSlider.value = mineCount.toString();
+    el_mineInput.value = mineCount.toString();
 }
 function setZoom() {
     const maxHeight = getHeightBetweenTopAndBottom() - 60;
@@ -250,16 +242,14 @@ function setZoom() {
     document.documentElement.style.setProperty('--cell', `${cell}px`);
 }
 function getHeightBetweenTopAndBottom() {
-    const topBar = document.getElementById('top-bar');
-    const bottomBar = document.getElementById('bottom-bar');
-    const topBarBottom = topBar.getBoundingClientRect().bottom;
-    const bottomBarTop = bottomBar.getBoundingClientRect().top;
+    const topBarBottom = el_topBar.getBoundingClientRect().bottom;
+    const bottomBarTop = el_bottomBar.getBoundingClientRect().top;
     const gap = bottomBarTop - topBarBottom;
     return gap;
 }
 function resetDifficultyTypeUnderlines() {
     Object.values(DifficultyType).forEach(d => {
-        const difficultyBtn = document.getElementById(`${d}-btn`);
+        const difficultyBtn = el_difficultyBtn(d);
         difficultyBtn.classList.remove('soft-underline');
     });
 }
@@ -276,7 +266,7 @@ function initEmptyBoard() {
     drawBoard();
 }
 function checkIfShouldShowViableMoves(shouldClearCache) {
-    if (!hintCheckbox.checked) {
+    if (!el_hintCheckbox.checked) {
         hideViableMoves();
     }
     else {
@@ -287,8 +277,7 @@ function checkIfShouldShowViableMoves(shouldClearCache) {
 function hideViableMoves() {
     for (const row of board) {
         for (const cell of row) {
-            const elem = getHtmlElementByCoords(cell.r, cell.c);
-            elem?.classList.remove(SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME);
+            el_cell(cell.r, cell.c).classList.remove(SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME);
         }
     }
 }
@@ -370,11 +359,11 @@ function checkIfGameLost(openedCell) {
     }
     shouldIncrementTime = false;
     gameState = GameStateType.LOST;
-    document.getElementById('game-state-msg').innerHTML = 'you lost;&nbsp;';
-    document.getElementById('game-state-msg').className = 'txt lose-msg';
-    document.getElementById('continue-btn').style.display = 'block';
-    document.getElementById('game-over-container').style.display = 'flex';
-    document.getElementById('game-over-container').style.boxShadow = '10px 10px 0 red, -10px -10px 0 red';
+    el_gameStateMsg.innerHTML = 'you lost;&nbsp;';
+    el_gameStateMsg.className = 'txt lose-msg';
+    el_continueBtn.style.display = 'block';
+    el_gameOverContainer.style.display = 'flex';
+    el_gameOverContainer.style.boxShadow = '10px 10px 0 red, -10px -10px 0 red';
     showMineLocations();
     return true;
 }
@@ -384,10 +373,10 @@ function checkIfGameWon() {
     }
     shouldIncrementTime = false;
     gameState = GameStateType.WON;
-    document.getElementById('game-state-msg').innerHTML = handleNewHighScore() ? `you won! new highscore ${getTimerVal()} seconds!` : 'you won!';
-    document.getElementById('game-state-msg').className = 'txt win-msg';
-    document.getElementById('game-over-container').style.display = 'flex';
-    document.getElementById('game-over-container').style.boxShadow = '10px 10px 0 gold, -10px -10px 0 gold';
+    el_gameStateMsg.innerHTML = handleNewHighScore() ? `you won! new highscore ${getTimerVal()} seconds!` : 'you won!';
+    el_gameStateMsg.className = 'txt win-msg';
+    el_gameOverContainer.style.display = 'flex';
+    el_gameOverContainer.style.boxShadow = '10px 10px 0 gold, -10px -10px 0 gold';
     showMineLocations();
     return true;
 }
@@ -411,18 +400,19 @@ function handleContinueGame() {
     board = previousBoardState;
     drawBoard();
     gameState = GameStateType.PLAYING;
-    setNewGameStyles();
-    if (hintCheckbox.checked) {
+    setNewGameStyles(true);
+    if (el_hintCheckbox.checked) {
         findViableMoves(board, false);
     }
 }
-function setNewGameStyles() {
+function setNewGameStyles(isContinuingGame) {
     getBoardContainerElement().style.filter = 'none';
-    document.getElementById('game-state-msg').innerHTML = '';
-    document.getElementById('continue-btn').style.display = 'none';
-    document.getElementById('continue-btn').style.display = 'none';
-    document.getElementById('game-over-container').style.display = 'none';
-    setFlagsLeft(mineCount);
+    el_gameStateMsg.innerHTML = '';
+    el_continueBtn.style.display = 'none';
+    el_gameOverContainer.style.display = 'none';
+    if (!isContinuingGame) {
+        setFlagsLeft(mineCount);
+    }
     resetDifficultyTypeUnderlines();
     handleDifficultyUnderline();
 }
@@ -430,7 +420,7 @@ function handleDifficultyUnderline() {
     const difficulty = getNativeDifficultyByDimensions();
     if (difficulty !== undefined) {
         setStoredDifficulty(difficulty);
-        document.getElementById(`${difficulty}-btn`).classList.add('soft-underline');
+        el_difficultyBtn(difficulty).classList.add('soft-underline');
     }
 }
 function getNativeDifficultyByDimensions() {
@@ -444,16 +434,16 @@ function getNativeDifficultyByDimensions() {
     return undefined;
 }
 function setFlagsLeft(newValue) {
-    document.getElementById('flags-left').innerHTML = newValue.toString();
+    el_flagsLeft.innerHTML = newValue.toString();
 }
 function getFlagsLeft() {
-    return parseInt(document.getElementById('flags-left').innerHTML);
+    return parseInt(el_flagsLeft.innerHTML);
 }
 function showMineLocations() {
     board.forEach(row => {
         for (const cell of row) {
             if (cell.cellState === CellStateType.MINE && !cell.isOpen) {
-                getHtmlElementByCoords(cell.r, cell.c).className = `cell ${CELL_MINE_CLASSNAME}`;
+                el_cell(cell.r, cell.c).className = `cell ${CELL_MINE_CLASSNAME}`;
             }
         }
     });
@@ -523,20 +513,19 @@ function startTimer() {
     }, 1000);
 }
 function isGamePaused() {
-    const el = document.getElementById('game-paused-container');
+    const el = el_gamePausedContainer;
     return el.style.display && el.style.display !== 'none';
 }
 function isShowingHighScores() {
-    return highScoresModalEl.style.display && highScoresModalEl.style.display !== 'none';
+    return el_highScoresModal.style.display && el_highScoresModal.style.display !== 'none';
 }
 function getBoardContainerElement() {
-    return document.getElementById('board-container') ?? boardElementRef;
+    return el_boardContainer ?? boardElementRef;
 }
 function handlePause(isResettingGame = false) {
     if (gameState !== GameStateType.PLAYING || isShowingHighScores()) {
         return;
     }
-    const pauseContainer = document.getElementById('game-paused-container');
     const boardContainer = getBoardContainerElement();
     const shouldPauseGame = !isGamePaused() && !isResettingGame;
     if (shouldPauseGame) {
@@ -544,24 +533,24 @@ function handlePause(isResettingGame = false) {
         boardParent = boardContainer.parentNode;
         boardPlaceholder = document.createComment('board placeholder');
         boardParent.replaceChild(boardPlaceholder, boardElementRef);
-        pauseContainer.style.display = 'flex';
-        pauseBtn.innerText = '▶︎';
+        el_gamePausedContainer.style.display = 'flex';
+        el_pauseBtn.innerText = 'play_arrow';
         shouldIncrementTime = false;
     }
     else {
         if (boardPlaceholder !== null) {
             boardPlaceholder.replaceWith(boardElementRef);
         }
-        pauseContainer.style.display = 'none';
-        pauseBtn.innerText = '||';
+        el_gamePausedContainer.style.display = 'none';
+        el_pauseBtn.innerText = 'pause';
         shouldIncrementTime = true;
     }
 }
 function getTimerVal() {
-    return parseInt(document.getElementById('timer-val').innerText);
+    return parseInt(el_timerVal.innerText);
 }
 function setTimerVal(value) {
-    document.getElementById('timer-val').innerHTML = value.toString();
+    el_timerVal.innerHTML = value.toString();
 }
 function clearTimer() {
     clearInterval(timerId);
@@ -672,9 +661,6 @@ function onMouseOver(mouseEvent) {
     const e = mouseEvent.target;
     curHoveredCellDataset = document.getElementById(e.id).dataset;
 }
-function getHtmlElementByCoords(r, c) {
-    return document.getElementById(`cell_${r}_${c}`);
-}
 function getCellClassName(cell) {
     if (cell.isFlagged) {
         return CELL_FLAG_CLASSNAME;
@@ -716,7 +702,7 @@ function updateCell(updatedCell) {
     }
     else if (updatedCell.isOpen) {
         updatedCell.isFlagged = false;
-        SOLVED_CELL_CLASSNAMES.forEach(className => getHtmlElementByCoords(updatedCell.r, updatedCell.c).classList.remove(className));
+        SOLVED_CELL_CLASSNAMES.forEach(className => el_cell(updatedCell.r, updatedCell.c).classList.remove(className));
     }
     assignCellDefaultClassName(updatedCell.r, updatedCell.c, getCellClassName(updatedCell));
 }
@@ -724,7 +710,7 @@ function assignCellDefaultClassName(r, c, classNameToAssign) {
     if (!DEFAULT_CELL_CLASSNAMES.includes(classNameToAssign)) {
         throw new Error('Invalid cell classname');
     }
-    const elem = getHtmlElementByCoords(r, c);
+    const elem = el_cell(r, c);
     DEFAULT_CELL_CLASSNAMES.forEach(className => elem.classList.remove(className));
     elem.classList.add(classNameToAssign);
 }
@@ -739,7 +725,7 @@ function setHighScore(difficulty, score) {
     localStorage.setItem(`${difficulty}-high-score`, score.toString());
 }
 function drawTitle() {
-    const el = document.getElementById('title');
+    const el = el_title;
     const title = ['m', 'i', 'n', 'e', 's', 'w', 'e', 'e', 'p', 'e', 'r'];
     const spanElements = [];
     const colors = [

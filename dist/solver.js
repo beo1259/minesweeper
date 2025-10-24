@@ -1,6 +1,7 @@
 import { PlayerKnownCell } from './models/player-known-cell.js';
 import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME } from './utils/constants.js';
 import { getMapAsCanonicalKey, areAnyCellsOpen, getCoordKey, getCoordTupleFromKey } from './utils/utils.js';
+import { el_cell } from './html_elements.js';
 /*
  * This file contains the logic for solving a board's certain mine/safe cells.
  * ---
@@ -178,7 +179,7 @@ function highlightAllAsSafe() {
         requestAnimationFrame(() => {
             for (const row of knownBoard) {
                 for (const cell of row) {
-                    const el = cellEl(cell.r, cell.c);
+                    const el = el_cell(cell.r, cell.c);
                     el.classList.add(SOLVED_SAFE_CLASSNAME);
                 }
             }
@@ -189,20 +190,15 @@ function applyStyles(minesToHighlight, safesToHighlight) {
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             for (const [r, c] of minesToHighlight) {
-                const el = cellEl(r, c);
-                el.classList.add(SOLVED_MINE_CLASSNAME);
+                el_cell(r, c).classList.add(SOLVED_MINE_CLASSNAME);
             }
             ;
             for (const [r, c] of safesToHighlight) {
-                const el = cellEl(r, c);
-                el.classList.add(SOLVED_SAFE_CLASSNAME);
+                el_cell(r, c).classList.add(SOLVED_SAFE_CLASSNAME);
             }
             ;
         });
     });
-}
-function cellEl(r, c) {
-    return document.getElementById(`cell_${r}_${c}`);
 }
 function areAllNumberedCellsSatisfied(assignedMineCoordKeys, openNumberCellCoordKeys) {
     for (const numberCellKey of openNumberCellCoordKeys) {

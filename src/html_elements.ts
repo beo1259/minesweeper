@@ -1,0 +1,32 @@
+import { DifficultyType } from "./models/enums/difficulty-type";
+
+export const el_topBar = document.getElementById('top-bar')!;
+export const el_boardContainer = document.getElementById('board-container')!;
+export const el_bottomBar = document.getElementById('bottom-bar')!
+
+export const el_title = document.getElementById('title')!;
+export const el_newGameBtn = document.getElementById('new-game-btn')!;
+export const el_pauseBtn = document.getElementById('pause-btn')!;
+export const el_hintCheckbox = document.getElementById('hint-checkbox')! as HTMLInputElement;
+export const el_flagsLeft = document.getElementById('flags-left')!;
+export const el_timerVal = document.getElementById('timer-val')!;
+
+export const el_colSlider = document.getElementById('col-slider') as HTMLInputElement;
+export const el_colInput = document.getElementById('col-input') as HTMLInputElement;
+export const el_rowSlider = document.getElementById('row-slider') as HTMLInputElement;
+export const el_rowInput = document.getElementById('row-input') as HTMLInputElement
+export const el_mineSlider = document.getElementById('mine-slider') as HTMLInputElement;
+export const el_mineInput = document.getElementById('mine-input') as HTMLInputElement;
+
+export const el_continueBtn = document.getElementById('continue-btn')!;
+export const el_gameStateMsg = document.getElementById('game-state-msg')!;
+export const el_gameOverContainer = document.getElementById('game-over-container')!;
+export const el_gamePausedContainer = document.getElementById('game-paused-container')!;
+
+export const el_highScoresModal = document.getElementById('high-scores-modal')!;
+export const el_highScoresBtn = document.getElementById('high-scores-btn')!;
+export const el_closeHighScoresBtn = document.getElementById('close-high-scores-btn')!;
+
+export const el_difficultyHighScore = (difficulty: DifficultyType) => document.getElementById(`${difficulty}-high-score`)!;
+export const el_difficultyBtn = (difficulty: DifficultyType) => document.getElementById(`${difficulty}-btn`)!;
+export const el_cell = (r: number, c: number) => document.getElementById(`cell_${r}_${c}`)!;

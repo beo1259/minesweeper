@@ -8,7 +8,7 @@
                         <p id="viable-moves-txt">enable helper</p>
                         <input type="checkbox" id="hint-checkbox">
                         <div class="tooltip-container">
-                            <span class="tooltip-trigger">ⓘ</span>
+                            <span class="tooltip-trigger material-symbols-outlined">info</span>
                             <div class="tooltip-msg">
                                 With this enabled, cells that have been 100% determined to be mines or safe will be highlighted. All hints shown are logically deducible by looking at the board.
                                 <br><br>
@@ -46,7 +46,7 @@
 
                             <div id="timer-container" class="game-info-txt">
                                 <span id="timer-val">0</span>
-                                <span id="pause-btn">||</span>
+                                <span id="pause-btn" class="material-symbols-outlined material-symbols-filled"></span>
                             </div>
                         </div>
                     </div>
@@ -62,20 +62,20 @@
             <div id="bottom-bar">
                 <div class="row-container slider-container">
                     <p class="slider-txt">columns</p>
-                    <input id="cols-slider" type="range" min="2" max="60">
-                    <input id="cols-input" type="number" class="slider-value-input"></input>
+                    <input id="col-slider" type="range" min="2" max="60">
+                    <input id="col-input" type="number" class="slider-value-input"></input>
                 </div>
 
                 <div class="row-container slider-container">
                     <p class="slider-txt">rows</p>
-                    <input id="rows-slider" type="range" min="2" max="60">
-                    <input id="rows-input" type="number" class="slider-value-input"></input>
+                    <input id="row-slider" type="range" min="2" max="60">
+                    <input id="row-input" type="number" class="slider-value-input"></input>
                 </div>
 
                 <div class="row-container slider-container">
                     <p class="slider-txt">mines</p>
-                    <input id="mines-slider" type="range" min="1" max="119">
-                    <input id="mines-input" type="number" class="slider-value-input"></input>
+                    <input id="mine-slider" type="range" min="1" max="119">
+                    <input id="mine-input" type="number" class="slider-value-input"></input>
                 </div>
             </div>
 
@@ -112,6 +112,7 @@
         <script type="module" src="./dist/main.js"></script>
         <link rel="stylesheet" type="text/css" href="./src/styles/styles.css">
         <link rel="stylesheet" type="text/css" href="./src/styles/cell_styles.css">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
         <link rel="icon" href="data:,">
     </body>
 </html>
