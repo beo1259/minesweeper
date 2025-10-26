@@ -1,5 +1,5 @@
 import { PlayerKnownCell } from './models/playerKnownCell.js';
-import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME } from './utils/constants.js';
+import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, SOLVED_PROBABILITY_CLASSNAME } from './utils/constants.js';
 import { getMapAsCanonicalKey, areAnyCellsOpen, getCoordKey, getCoordTupleFromKey } from './utils/utils.js';
 import { el_cell } from './htmlElements.js';
 /*
@@ -138,22 +138,7 @@ function handleMineOdds(validStates, frontierCellCoordKeys) {
     const mineProbabilities = getCellProbabilities(validMineStatesCoordsOnly);
     const safeProbabilities = getCellProbabilities(validSafeStatesCoordsOnly);
     setCachedMineCoordsUponAnalysis(mineProbabilities, safeProbabilities, frontierCellCoordKeys);
-    const minesToHighlight = [];
-    const safesToHighlight = [];
-    for (const [coordKey, mineProbability] of mineProbabilities.entries()) {
-        if (mineProbability === 1) {
-            const [r, c] = getCoordTupleFromKey(coordKey);
-            minesToHighlight.push([r, c]);
-        }
-    }
-    for (const [coordKey, safeProbability] of safeProbabilities.entries()) {
-        if (safeProbability === 1) {
-            const [r, c] = getCoordTupleFromKey(coordKey);
-            safesToHighlight.push([r, c]);
-        }
-    }
-    console.log(minesToHighlight, safesToHighlight);
-    applyStyles(minesToHighlight, safesToHighlight);
+    applyProbabilityStyles();
 }
 function setCachedMineCoordsUponAnalysis(mineProbabilities, safeProbabilities, frontierCellCoordKeys) {
     const newCache = new Map();
@@ -175,30 +160,35 @@ function setCachedMineCoordsUponAnalysis(mineProbabilities, safeProbabilities, f
     cachedCellProbabilityMap = newCache;
 }
 function highlightAllAsSafe() {
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            for (const row of knownBoard) {
-                for (const cell of row) {
-                    const el = el_cell(cell.r, cell.c);
-                    el.classList.add(SOLVED_SAFE_CLASSNAME);
-                }
-            }
-        });
+    for (const row of knownBoard) {
+        for (const cell of row) {
+            applyCellProbabilityStyle(cell.r, cell.c, 0);
+        }
+    }
+}
+function applyProbabilityStyles() {
+    Array.from(cachedCellProbabilityMap).forEach((cellP) => {
+        const key = cellP[0];
+        const p = cellP[1];
+        const coords = getCoordTupleFromKey(key);
+        applyCellProbabilityStyle(coords[0], coords[1], p);
     });
 }
-function applyStyles(minesToHighlight, safesToHighlight) {
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            for (const [r, c] of minesToHighlight) {
-                el_cell(r, c).classList.add(SOLVED_MINE_CLASSNAME);
-            }
-            ;
-            for (const [r, c] of safesToHighlight) {
-                el_cell(r, c).classList.add(SOLVED_SAFE_CLASSNAME);
-            }
-            ;
-        });
-    });
+function applyCellProbabilityStyle(r, c, p) {
+    const cellEl = el_cell(r, c);
+    const existingProbabilityEl = cellEl.getElementsByTagName('p')?.[0];
+    const cellProbabilityEl = existingProbabilityEl ? existingProbabilityEl : document.createElement('p');
+    cellProbabilityEl.className = SOLVED_PROBABILITY_CLASSNAME;
+    if (p === 0 && !cellProbabilityEl.classList.contains(SOLVED_SAFE_CLASSNAME)) {
+        cellProbabilityEl.classList.add(SOLVED_SAFE_CLASSNAME);
+    }
+    else if (p === 1 && !cellProbabilityEl.classList.contains(SOLVED_MINE_CLASSNAME)) {
+        cellProbabilityEl.classList.add(SOLVED_MINE_CLASSNAME);
+    }
+    cellProbabilityEl.innerText = (Math.round(p * 100)).toString();
+    if (!existingProbabilityEl) {
+        cellEl.appendChild(cellProbabilityEl);
+    }
 }
 function areAllNumberedCellsSatisfied(assignedMineCoordKeys, openNumberCellCoordKeys) {
     for (const numberCellKey of openNumberCellCoordKeys) {

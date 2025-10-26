@@ -1,7 +1,7 @@
 import { Cell } from './models/cell.js';
 import { CellStateType } from './models/enums/cellStateType.js';
 import { findViableMoves } from './solver.js';
-import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME, DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, LOWER_BOUND_BOARD_DIMENSION, DIFFICULTY_TYPE_TO_DIMENSIONS_MAP, DIFFICULTY_TYPE_TO_MINE_COUNT_MAP } from './utils/constants.js';
+import { DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, LOWER_BOUND_BOARD_DIMENSION, DIFFICULTY_TYPE_TO_DIMENSIONS_MAP, DIFFICULTY_TYPE_TO_MINE_COUNT_MAP } from './utils/constants.js';
 import { clamp, getCoordKey, randArrayEntry } from './utils/utils.js';
 import { DifficultyType } from './models/enums/difficultyType.js';
 import { GameStateType } from './models/enums/gameStateType.js';
@@ -277,7 +277,7 @@ function checkIfShouldShowViableMoves(shouldClearCache) {
 function hideViableMoves() {
     for (const row of board) {
         for (const cell of row) {
-            el_cell(cell.r, cell.c).classList.remove(SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME);
+            removeViableMoveStyles(cell.r, cell.c);
         }
     }
 }
@@ -623,13 +623,17 @@ function drawBoard() {
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
             var elem = document.createElement('div');
-            boardContainer.appendChild(elem);
             elem.id = `cell_${r}_${c}`;
             elem.className = getCellClassName(board[r][c]);
+            boardContainer.appendChild(elem);
             elem.setAttribute('data-row', r.toString());
             elem.setAttribute('data-col', c.toString());
             elem.addEventListener('mouseover', (e) => onMouseOver(e));
             elem.addEventListener('mouseout', () => curHoveredCellDataset = null);
+            // var pElem = document.createElement('p');
+            // pElem.className = 'cell-probability';
+            // pElem.innerText = '25';
+            // elem.appendChild(pElem);
         }
     }
 }
@@ -702,9 +706,20 @@ function updateCell(updatedCell) {
     }
     else if (updatedCell.isOpen) {
         updatedCell.isFlagged = false;
-        SOLVED_CELL_CLASSNAMES.forEach(className => el_cell(updatedCell.r, updatedCell.c).classList.remove(className));
+        removeViableMoveStyles(updatedCell.r, updatedCell.c);
     }
     assignCellDefaultClassName(updatedCell.r, updatedCell.c, getCellClassName(updatedCell));
+}
+function removeViableMoveStyles(r, c) {
+    SOLVED_CELL_CLASSNAMES.forEach(className => {
+        const cellEl = el_cell(r, c);
+        cellEl.classList.remove(className);
+        const solvedCellPTag = cellEl.getElementsByTagName('p')?.[0];
+        if (solvedCellPTag) {
+            solvedCellPTag.classList.remove(className);
+            solvedCellPTag.innerText = '';
+        }
+    });
 }
 function assignCellDefaultClassName(r, c, classNameToAssign) {
     if (!DEFAULT_CELL_CLASSNAMES.includes(classNameToAssign)) {

@@ -6,6 +6,7 @@
 #board-container > div {
     width: var(--cell);
     height: var(--cell);
+    position: relative;
     box-sizing: border-box;
     background-repeat: no-repeat;
     background-position: center;
@@ -64,9 +65,6 @@
     background-image: url('../assets/closed.svg');
 }
 
-/* .cell-solved-mine { border: 3px solid red; } */
-/* .cell-solved-safe { border: 3px solid rgb(0, 230, 0); } */
-
 .cell-solved-mine,
 .cell-solved-safe {
     position: relative;
@@ -90,3 +88,17 @@
     background-color: rgb(0, 230, 0);
 }
 
+.cell-probability {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    cursor: pointer;
+}

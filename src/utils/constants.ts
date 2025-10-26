@@ -1,11 +1,13 @@
-import { BoardDimensions } from "../models/board-dimensions.js";
-import { DifficultyType } from "../models/enums/difficulty-type.js"
+import { BoardDimensions } from "../models/boardDimensions.js";
+import { DifficultyType } from "../models/enums/difficultyType.js"
 
 export const SOLVED_MINE_CLASSNAME = 'cell-solved-mine';
 export const SOLVED_SAFE_CLASSNAME = 'cell-solved-safe';
+export const SOLVED_PROBABILITY_CLASSNAME = 'cell-probability';
 export const SOLVED_CELL_CLASSNAMES = [
     SOLVED_MINE_CLASSNAME, 
-    SOLVED_SAFE_CLASSNAME
+    SOLVED_SAFE_CLASSNAME,
+    SOLVED_PROBABILITY_CLASSNAME,
 ];
 
 export const CELL_0_CLASSNAME = 'cell-0';
