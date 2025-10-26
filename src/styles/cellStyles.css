@@ -2,7 +2,8 @@
     --cell: 44px;
 }
 
-.cell {
+/* base cell style */
+#board-container > div {
     width: var(--cell);
     height: var(--cell);
     box-sizing: border-box;

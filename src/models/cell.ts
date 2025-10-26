@@ -1,4 +1,4 @@
-import { CellStateType } from "./enums/cell-state-type.js";
+import { CellStateType } from "./enums/cellStateType.js";
 
 export class Cell {
     r: number; // row

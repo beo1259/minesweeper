@@ -1,4 +1,4 @@
-import { DifficultyType } from "./models/enums/difficulty-type";
+import { DifficultyType } from "./models/enums/difficultyType.js";
 
 export const el_topBar = document.getElementById('top-bar')!;
 export const el_boardContainer = document.getElementById('board-container')!;
@@ -7,9 +7,9 @@ export const el_bottomBar = document.getElementById('bottom-bar')!
 export const el_title = document.getElementById('title')!;
 export const el_newGameBtn = document.getElementById('new-game-btn')!;
 export const el_pauseBtn = document.getElementById('pause-btn')!;
-export const el_hintCheckbox = document.getElementById('hint-checkbox')! as HTMLInputElement;
 export const el_flagsLeft = document.getElementById('flags-left')!;
 export const el_timerVal = document.getElementById('timer-val')!;
+export const el_hintCheckbox = document.getElementById('hint-checkbox')! as HTMLInputElement;
 
 export const el_colSlider = document.getElementById('col-slider') as HTMLInputElement;
 export const el_colInput = document.getElementById('col-input') as HTMLInputElement;

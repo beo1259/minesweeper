@@ -1,8 +1,8 @@
-import { PlayerKnownCell } from './models/player-known-cell.js';
+import { PlayerKnownCell } from './models/playerKnownCell.js';
 import { Cell } from './models/cell.js';
 import { SOLVED_SAFE_CLASSNAME, SOLVED_MINE_CLASSNAME } from './utils/constants.js';
 import { getMapAsCanonicalKey, areAnyCellsOpen, getCoordKey, getCoordTupleFromKey } from './utils/utils.js';
-import { el_cell } from './html_elements.js';
+import { el_cell } from './htmlElements.js';
 
 /*
  * This file contains the logic for solving a board's certain mine/safe cells.
