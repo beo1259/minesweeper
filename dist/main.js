@@ -98,7 +98,7 @@ function onMineInput(inputVal) {
     applySettingsAndResetGame(false);
 }
 function setDimensionInputValues(didClickDifficulty) {
-    const difficulty = getStoredDifficulty();
+    const difficulty = getStoredDifficulty() ?? 'medium';
     let cols = 0;
     let rows = 0;
     if (!didClickDifficulty && el_rowInput.value && el_colInput.value && el_mineInput.value) {

@@ -6,6 +6,7 @@ import { clamp, getCoordKey, randArrayEntry } from './utils/utils.js';
 import { DifficultyType } from './models/enums/difficultyType.js';
 import { GameStateType } from './models/enums/gameStateType.js';
 import { el_closeHighScoresBtn, el_continueBtn, el_highScoresBtn, el_newGameBtn, el_pauseBtn, el_hintCheckbox, el_colSlider, el_colInput, el_rowSlider, el_rowInput, el_mineSlider, el_mineInput, el_bottomBar, el_gameStateMsg, el_gameOverContainer, el_topBar, el_flagsLeft, el_gamePausedContainer, el_boardContainer, el_timerVal, el_title, el_highScoresModal, el_difficultyBtn, el_cell, el_difficultyHighScore } from './htmlElements.js';
+import { BoardDimensions } from './models/boardDimensions.js';
 
 // board state info
 let board: Cell[][];
@@ -121,7 +122,7 @@ function onMineInput(inputVal: string) {
 }
 
 function setDimensionInputValues(didClickDifficulty: boolean) {
-    const difficulty = getStoredDifficulty()!;
+    const difficulty = getStoredDifficulty() ?? 'medium';
     let cols = 0;
     let rows = 0;
     if (!didClickDifficulty && el_rowInput.value && el_colInput.value && el_mineInput.value) {
