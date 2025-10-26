@@ -2,7 +2,7 @@
 
 the classic Minesweeper game. includes a solver to show viable moves for any given board state.
 
-[label](https://beo1259.github.io/minesweeper)
+[play it here](https://beo1259.github.io/minesweeper)
 
 ## running locally
 
