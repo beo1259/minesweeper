@@ -23,7 +23,9 @@ let recursiveCalls: number = 0;
 export function findViableMoves(board: Cell[][], shouldClearCache: boolean) {
     recursiveCalls = 0;
 
+    console.log(cachedCellProbabilityMap);
     if (shouldClearCache) {
+        console.log('did clear cache');
         cachedCellProbabilityMap = new Map();
     }
 
@@ -127,7 +129,9 @@ function cleanNonFrontierCellsFromCache(frontierCellCoordKeys: Set<string>) {
 
 function getNextPossibleValidStates(curState: Map<string, boolean>, unusedFrontierCells: Set<string>) {
     const nextPossibleStates: Map<string, boolean>[] = [];
+    const orderedFrontierCells = getOrderedUnusedFrontierCells(unusedFrontierCells, curState);
 
+    // for (const coordKey of orderedFrontierCells) {
     for (const coordKey of unusedFrontierCells) {
         if (curState.get(coordKey) === true) {
             continue;
@@ -145,6 +149,51 @@ function getNextPossibleValidStates(curState: Map<string, boolean>, unusedFronti
 
     return nextPossibleStates;
 }
+
+function getOrderedUnusedFrontierCells(unusedFrontierCells: Set<string>, curState: Map<string, boolean>) {
+    const ordered: Set<string> = new Set(); 
+    // const degreeMap: Map<string, number> = new Map();
+    //
+    // for (const key of Array.from(unusedFrontierCells)) {
+    //     const [r, c] = getCoordTupleFromKey(key);
+    //     const neighbours = getPlayerKnownNeighbours(r, c);
+    //
+    //     const openNeigbours = neighbours.filter(n => n.isOpen);
+    //
+    //     const assignedAround = openNeigbours
+    //         .map(n => getCoordKey(n.r, n.c))
+    //         .filter(key => curState.get(key) === true)
+    //
+    //     const degree =  assignedAround.length
+    // }
+
+    return ordered;
+}
+
+// TODO - Forward check all neighbour frontier cells
+function isSafeToPlaceMineAtCell(r: number, c: number, assignedMineCoordKeys: Map<string, boolean>) {
+    const numberedNeighbours = getPlayerKnownNeighbours(r, c)
+        .filter(n => n.knownValue !== null && n.knownValue > 0);
+
+    for (const nn of numberedNeighbours) {
+        const neigbourKeys = getPlayerKnownNeighbours(nn.r, nn.c).map(n => getCoordKey(n.r, n.c));
+        const assignedMines = neigbourKeys.filter(nKey => assignedMineCoordKeys.get(nKey) === true).length;
+        const unknowns = neigbourKeys.filter(nKey => !assignedMineCoordKeys.has(nKey)).length;
+        const target = nn.knownValue!;
+
+        // check upper bound
+        if (assignedMines + 1 > target) {
+            return false;
+        }
+
+        // check lower bound (if we don't place a mine here because the upper bound is not satisfied in the above condition, still return false if it's impossible to reach the constraint without the placement)
+        const maxPossibleAfterPlacement = assignedMines + 1 + (unknowns - 1);
+        if (maxPossibleAfterPlacement < target) return false;
+    }
+
+    return true;
+}
+
 
 function handleMineOdds(validStates: Map<string, boolean>[], frontierCellCoordKeys: Set<string>) {
     if (validStates.length === 0) return;
@@ -255,30 +304,6 @@ function areAllNumberedCellsSatisfied(assignedMineCoordKeys: Map<string, boolean
     return true;
 }
 
-// TODO - Forward check all neighbour frontier cells
-function isSafeToPlaceMineAtCell(r: number, c: number, assignedMineCoordKeys: Map<string, boolean>) {
-    const numberedNeighbours = getPlayerKnownNeighbours(r, c)
-        .filter(n => n.knownValue !== null && n.knownValue > 0);
-
-    for (const nn of numberedNeighbours) {
-        const neigbourKeys = getPlayerKnownNeighbours(nn.r, nn.c).map(n => getCoordKey(n.r, n.c));
-        const assignedMines = neigbourKeys.filter(nKey => assignedMineCoordKeys.get(nKey) === true).length;
-        const unknowns = neigbourKeys.filter(nKey => !assignedMineCoordKeys.has(nKey)).length;
-        const target = nn.knownValue!;
-
-        // check upper bound
-        if (assignedMines + 1 > target) {
-            return false;
-        }
-
-        // check lower bound (if we don't place a mine here because the upper bound is not satisfied in the above condition, still return false if it's impossible to reach the constraint without the placement)
-        const maxPossibleAfterPlacement = assignedMines + 1 + (unknowns - 1);
-        if (maxPossibleAfterPlacement < target) return false;
-    }
-
-    return true;
-}
-
 function getCellProbabilities(validAssignments: Set<string>[]) {
     const numberOfAppearancesByCoordKey: Map<string, number> = new Map();
     for (const config of validAssignments) {
@@ -317,7 +342,14 @@ function setStartingCellKnowledge(frontierArr: PlayerKnownCell[], openNumberCell
 
 function getDefaultState(frontierCellCoordKeys: Set<string>, openNumberCells: PlayerKnownCell[]) {
     cacheImmediateMineCoords(frontierCellCoordKeys, openNumberCells);
-    return new Map(Array.from(frontierCellCoordKeys).map(key => [key, cachedCellProbabilityMap.get(key) === 1]))
+
+    const map = new Map<string, boolean>();
+    for (const key of frontierCellCoordKeys) {
+        if (cachedCellProbabilityMap.get(key) === 1) {
+            map.set(key, true);
+        }
+    }
+    return map;
 }
 
 function cacheImmediateMineCoords(frontierCellCoordKeys: Set<string>, openNumberCells: PlayerKnownCell[]) {
