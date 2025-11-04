@@ -1,12 +1,11 @@
 import { Cell } from './models/cell.js';
 import { CellStateType } from './models/enums/cellStateType.js';
 import { findViableMoves } from './solver.js';
-import { DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, LOWER_BOUND_BOARD_DIMENSION, DIFFICULTY_TYPE_TO_DIMENSIONS_MAP, DIFFICULTY_TYPE_TO_MINE_COUNT_MAP } from './utils/constants.js';
+import { DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, LOWER_BOUND_BOARD_DIMENSION, DIFFICULTY_TYPE_TO_DIMENSIONS_MAP, DIFFICULTY_TYPE_TO_MINE_COUNT_MAP, CELL_FLAG_WRONG_CLASSNAME } from './utils/constants.js';
 import { clamp, getCoordKey, randArrayEntry } from './utils/utils.js';
 import { DifficultyType } from './models/enums/difficultyType.js';
 import { GameStateType } from './models/enums/gameStateType.js';
 import { el_closeHighScoresBtn, el_continueBtn, el_highScoresBtn, el_newGameBtn, el_pauseBtn, el_hintCheckbox, el_colSlider, el_colInput, el_rowSlider, el_rowInput, el_mineSlider, el_mineInput, el_bottomBar, el_gameStateMsg, el_gameOverContainer, el_topBar, el_flagsLeft, el_gamePausedContainer, el_boardContainer, el_timerVal, el_title, el_highScoresModal, el_difficultyBtn, el_cell, el_difficultyHighScore } from './htmlElements.js';
-import { BoardDimensions } from './models/boardDimensions.js';
 
 // board state info
 let board: Cell[][];
@@ -226,11 +225,12 @@ function showOrHideModal(modal: HTMLElement) {
 function processCellMainClick(r: number, c: number) {
     const wasFirstClick = isBoardClean
 
+    previousBoardState = cloneBoard();
+
     console.time('handleCellMainClick');
     handleCellMainClick(r, c);
     console.timeEnd('handleCellMainClick');
 
-    previousBoardState = cloneBoard();
     checkIfShouldShowViableMoves(wasFirstClick);
 }
 
@@ -552,7 +552,9 @@ function getFlagsLeft() {
 function showMineLocations() {
     board.forEach(row => {
         for (const cell of row) {
-            if (cell.cellState === CellStateType.MINE && !cell.isOpen) {
+            if (cell.isFlagged && cell.cellState !== CellStateType.MINE) {
+                el_cell(cell.r, cell.c).className = CELL_FLAG_WRONG_CLASSNAME;
+            } else if (cell.cellState === CellStateType.MINE && !cell.isOpen) {
                 el_cell(cell.r, cell.c).className = CELL_MINE_CLASSNAME;
             }
         }
@@ -794,11 +796,6 @@ function drawBoard(): void {
 
             elem.addEventListener('mouseover', (e) => onMouseOver(e));
             elem.addEventListener('mouseout', () => curHoveredCellDataset = null);
-
-            // var pElem = document.createElement('p');
-            // pElem.className = 'cell-probability';
-            // pElem.innerText = '25';
-            // elem.appendChild(pElem);
         }
     }
 }

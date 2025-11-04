@@ -53,6 +53,10 @@
     background-image: url('../assets/flag.svg');
 }
 
+.cell-flag-wrong {
+    background-image: url('../assets/flag_wrong.svg');
+}
+
 .cell-mine {
     background-image: url('../assets/mine.svg');
 }

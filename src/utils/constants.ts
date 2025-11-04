@@ -23,6 +23,7 @@ export const CELL_CLOSED_CLASSNAME = 'cell-closed';
 export const CELL_MINE_CLASSNAME = 'cell-mine';
 export const CELL_MINE_RED_CLASSNAME = 'cell-mine-red';
 export const CELL_FLAG_CLASSNAME = 'cell-flag';
+export const CELL_FLAG_WRONG_CLASSNAME = 'cell-flag-wrong';
 export const DEFAULT_CELL_CLASSNAMES = [
     CELL_0_CLASSNAME, 
     CELL_1_CLASSNAME,
@@ -36,6 +37,7 @@ export const DEFAULT_CELL_CLASSNAMES = [
     CELL_MINE_CLASSNAME,
     CELL_MINE_RED_CLASSNAME,
     CELL_FLAG_CLASSNAME,
+    CELL_FLAG_WRONG_CLASSNAME,
     CELL_CLOSED_CLASSNAME
 ];
 
