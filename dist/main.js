@@ -190,7 +190,10 @@ function showOrHideModal(modal) {
 }
 function processCellMainClick(r, c) {
     const wasFirstClick = isBoardClean;
+    console.time('handleCellMainClick');
     handleCellMainClick(r, c);
+    console.timeEnd('handleCellMainClick');
+    previousBoardState = cloneBoard();
     checkIfShouldShowViableMoves(wasFirstClick);
 }
 function getHoveredRowAndColumn() {
@@ -312,7 +315,6 @@ function cloneBoard() {
     return board.map(row => row.map(c => new Cell(c.r, c.c, c.value, c.cellState, c.isOpen, c.isFlagged)));
 }
 function handleCellMainClick(r, c) {
-    previousBoardState = cloneBoard();
     hidePreviouslyXrayedNeighbours();
     const cell = board[r][c];
     if (cell.isFlagged) {
@@ -471,8 +473,11 @@ function handleChord(cell) {
 function floodAndFill(r, c) {
     let visited = new Set();
     let q = [[r, c]];
-    while (q.length > 0) {
-        const coords = q.shift();
+    let i = 0;
+    const cellsToOpen = [];
+    while (i < q.length) {
+        const coords = q[i];
+        i++;
         const key = `${coords[0]},${coords[1]}`;
         const cell = board[coords[0]][coords[1]];
         if (visited.has(key)) {
@@ -487,14 +492,17 @@ function floodAndFill(r, c) {
                 continue;
             }
             else {
-                n.isOpen = true;
-                updateCell(n);
+                cellsToOpen.push(n);
                 if (n.value === 0) {
                     q.push([n.r, n.c]);
                 }
             }
         }
     }
+    cellsToOpen.forEach(cell => {
+        cell.isOpen = true;
+        updateCell(cell);
+    });
 }
 function handleFirstClick(clickedRow, clickedCol) {
     initBoardOnFirstClick(clickedRow, clickedCol);
