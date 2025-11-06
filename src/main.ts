@@ -260,6 +260,7 @@ function applySettingsAndResetGame(didClickDifficulty: boolean) {
     // game state bools
     gameState = GameStateType.PLAYING;
     isBoardClean = true;
+    hasShownViableMoves = false;
 
     // ui stuff
     initEmptyBoard();

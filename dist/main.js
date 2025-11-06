@@ -217,6 +217,7 @@ function applySettingsAndResetGame(didClickDifficulty) {
     // game state bools
     gameState = GameStateType.PLAYING;
     isBoardClean = true;
+    hasShownViableMoves = false;
     // ui stuff
     initEmptyBoard();
     setNewGameStyles(false);
