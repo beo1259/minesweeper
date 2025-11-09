@@ -504,7 +504,12 @@ function handleContinueGame() {
     shouldIncrementTime = true;
 
     board = previousBoardState;
+
+    neighbourCache = null;
+    cellEls = [];
+
     drawBoard();
+    buildNeighbourCache();
 
     gameState = GameStateType.PLAYING;
     setNewGameStyles(true);

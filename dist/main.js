@@ -406,7 +406,10 @@ function handleNewHighScore() {
 function handleContinueGame() {
     shouldIncrementTime = true;
     board = previousBoardState;
+    neighbourCache = null;
+    cellEls = [];
     drawBoard();
+    buildNeighbourCache();
     gameState = GameStateType.PLAYING;
     setNewGameStyles(true);
     if (el_hintCheckbox.checked) {
