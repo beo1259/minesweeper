@@ -1,11 +1,11 @@
 import { Cell } from './models/cell.js';
 import { CellStateType } from './models/enums/cellStateType.js';
 import { findViableMoves } from './solver.js';
-import { DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, LOWER_BOUND_BOARD_DIMENSION, DIFFICULTY_TYPE_TO_DIMENSIONS_MAP, DIFFICULTY_TYPE_TO_MINE_COUNT_MAP, CELL_FLAG_WRONG_CLASSNAME } from './utils/constants.js';
-import { clamp, getCoordKey, randArrayEntry } from './utils/utils.js';
+import { DEFAULT_CELL_CLASSNAMES, SOLVED_CELL_CLASSNAMES, CELL_FLAG_CLASSNAME, CELL_CLOSED_CLASSNAME, CELL_MINE_RED_CLASSNAME, CELL_MINE_CLASSNAME, CELL_0_CLASSNAME, CELL_1_CLASSNAME, CELL_2_CLASSNAME, CELL_3_CLASSNAME, CELL_4_CLASSNAME, CELL_5_CLASSNAME, CELL_6_CLASSNAME, CELL_7_CLASSNAME, CELL_8_CLASSNAME, LOWER_BOUND_BOARD_DIMENSION, DIFFICULTY_TYPE_TO_DIMENSIONS_MAP, DIFFICULTY_TYPE_TO_MINE_COUNT_MAP, CELL_FLAG_WRONG_CLASSNAME, DIRECTIONS } from './utils/constants.js';
+import { clamp, getCoordKey, getCoordTupleFromKey, randArrayEntry } from './utils/utils.js';
 import { DifficultyType } from './models/enums/difficultyType.js';
 import { GameStateType } from './models/enums/gameStateType.js';
-import { el_closeHighScoresBtn, el_continueBtn, el_highScoresBtn, el_newGameBtn, el_pauseBtn, el_hintCheckbox, el_colSlider, el_colInput, el_rowSlider, el_rowInput, el_mineSlider, el_mineInput, el_bottomBar, el_gameStateMsg, el_gameOverContainer, el_topBar, el_flagsLeft, el_gamePausedContainer, el_boardContainer, el_timerVal, el_title, el_highScoresModal, el_difficultyBtn, el_cell, el_difficultyHighScore } from './htmlElements.js';
+import { el_closeHighScoresBtn, el_continueBtn, el_highScoresBtn, el_newGameBtn, el_pauseBtn, el_hintCheckbox, el_colSlider, el_colInput, el_rowSlider, el_rowInput, el_mineSlider, el_mineInput, el_bottomBar, el_gameStateMsg, el_gameOverContainer, el_topBar, el_flagsLeft, el_gamePausedContainer, el_boardContainer, el_timerVal, el_title, el_highScoresModal, el_difficultyBtn, el_difficultyHighScore } from './htmlElements.js';
 
 // board state info
 let board: Cell[][];
@@ -26,6 +26,10 @@ let isBoardClean: boolean = true;
 // timer stuff
 let shouldIncrementTime: boolean = false;
 let timerId: number = 0;
+
+// cache
+let cellEls: HTMLElement[][] = [];
+let neighbourCache: Cell[][][] | null = null;
 
 // misc
 let curHoveredCellDataset: DOMStringMap | null = null;
@@ -257,10 +261,12 @@ function applySettingsAndResetGame(didClickDifficulty: boolean) {
     clearTimer();
     setTimerVal(0);
 
-    // game state bools
+    // game state variables
     gameState = GameStateType.PLAYING;
     isBoardClean = true;
     hasShownViableMoves = false;
+    cellEls = [];
+    neighbourCache = null;
 
     // ui stuff
     initEmptyBoard();
@@ -554,9 +560,9 @@ function showMineLocations() {
     board.forEach(row => {
         for (const cell of row) {
             if (cell.isFlagged && cell.cellState !== CellStateType.MINE) {
-                el_cell(cell.r, cell.c).className = CELL_FLAG_WRONG_CLASSNAME;
+                cellEls[cell.r][cell.c].className = CELL_FLAG_WRONG_CLASSNAME;
             } else if (cell.cellState === CellStateType.MINE && !cell.isOpen) {
-                el_cell(cell.r, cell.c).className = CELL_MINE_CLASSNAME;
+                cellEls[cell.r][cell.c].className = CELL_MINE_CLASSNAME;
             }
         }
     })
@@ -731,6 +737,8 @@ function initBoardOnFirstClick(firstClickRow: number, firstClickCol: number): vo
         }
     }
 
+    buildNeighbourCache();
+
     const firstClickSquare = board[firstClickRow][firstClickCol];
     firstClickSquare.isOpen = true;
     updateCell(firstClickSquare);
@@ -786,6 +794,8 @@ function drawBoard(): void {
     boardContainer.addEventListener('contextmenu', (e) => e.preventDefault());
 
     for (let r = 0; r < rows; r++) {
+        cellEls[r] = [];
+
         for (let c = 0; c < cols; c++) {
             var elem = document.createElement('div');
             elem.id = `cell_${r}_${c}`;
@@ -797,6 +807,8 @@ function drawBoard(): void {
 
             elem.addEventListener('mouseover', (e) => onMouseOver(e));
             elem.addEventListener('mouseout', () => curHoveredCellDataset = null);
+
+            cellEls[r][c] = elem;
         }
     }
 }
@@ -810,28 +822,51 @@ function setStoredDifficulty(difficulty: DifficultyType) {
 }
 
 function getNeighbours(r: number, c: number) {
-    const directions = [
-        [-1, -1], [-1, 0], [-1, 1],
-        [0, -1], [0, 1],
-        [1, -1], [1, 0], [1, 1],
-    ];
+    if (neighbourCache !== null) {
+        return neighbourCache[r][c];
+    }
 
-    let neighbours: Cell[] = [];
-    for (let dir of directions) {
-        const targetRow = r + dir[0];
-        const targetCol = c + dir[1];
+    const rows = rowCount();
+    const cols = colCount();
+    const neighbours: Cell[] = [];
 
-        if (
-            targetRow < 0 || targetRow > rowCount() - 1
-            || targetCol < 0 || targetCol > colCount() - 1
-        ) {
-            continue;
+    for (let i = 0; i < DIRECTIONS.length; i++) {
+        const nr = r + DIRECTIONS[i][0];
+        const nc = c + DIRECTIONS[i][1];
+
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+            neighbours.push(board[nr][nc]);
         }
-
-        neighbours.push(board[targetRow][targetCol]);
     }
 
     return neighbours;
+}
+
+function buildNeighbourCache() {
+
+    const rows = rowCount();
+    const cols = colCount();
+
+    neighbourCache = new Array(rows);
+
+    for (let r = 0; r < rows; r++) {
+        neighbourCache[r] = new Array(cols);
+
+        for (let c = 0; c < cols; c++) {
+            const neighbours: Cell[] = [];
+
+            for (let i = 0; i < DIRECTIONS.length; i++) {
+                const nr = r + DIRECTIONS[i][0];
+                const nc = c + DIRECTIONS[i][1];
+
+                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                    neighbours.push(board[nr][nc]);
+                }
+            }
+
+            neighbourCache[r][c] = neighbours;
+        }
+    }
 }
 
 function onMouseOver(mouseEvent: MouseEvent) {
@@ -885,7 +920,7 @@ function updateCell(updatedCell: Cell) {
 
 function removeViableMoveStyles(r: number, c: number) {
     SOLVED_CELL_CLASSNAMES.forEach(className => { 
-        const cellEl = el_cell(r, c);
+        const cellEl = cellEls[r][c];
         cellEl.classList.remove(className) 
 
         const solvedCellPTag = cellEl.getElementsByTagName('p')?.[0];
@@ -901,7 +936,7 @@ function assignCellDefaultClassName(r: number, c: number, classNameToAssign: str
         throw new Error('Invalid cell classname');
     }
 
-    const elem = el_cell(r, c)!;
+    const elem = cellEls[r][c];
     DEFAULT_CELL_CLASSNAMES.forEach(className => elem.classList.remove(className));
     elem.classList.add(classNameToAssign);
 }

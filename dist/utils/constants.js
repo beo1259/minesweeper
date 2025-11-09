@@ -1,5 +1,10 @@
 import { BoardDimensions } from "../models/boardDimensions.js";
 import { DifficultyType } from "../models/enums/difficultyType.js";
+export const DIRECTIONS = [
+    [-1, -1], [-1, 0], [-1, 1],
+    [0, -1], [0, 1],
+    [1, -1], [1, 0], [1, 1],
+];
 export const SOLVED_MINE_CLASSNAME = 'cell-solved-mine';
 export const SOLVED_SAFE_CLASSNAME = 'cell-solved-safe';
 export const SOLVED_PROBABILITY_CLASSNAME = 'cell-probability';
